@@ -1,0 +1,98 @@
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+
+spring:
+  application:
+    name: tms-admin
+  jackson:
+    default-property-inclusion: non_null
+    time-zone: UTC
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/tms?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: tms
+    password: tms
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 30
+      connection-timeout: 10000
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      database: 0
+      timeout: 3000
+      lettuce:
+        pool:
+          max-active: 32
+          max-idle: 16
+          min-idle: 4
+  mail:
+    host:
+    port: 465
+    username:
+    password:
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    default-enum-type-handler: org.apache.ibatis.type.EnumTypeHandler
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    banner: false
+    db-config:
+      id-type: assign_id
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+tms:
+  id:
+    worker-id: 1
+    datacenter-id: 1
+  session:
+    idle-timeout: 30m
+    max-lifetime: 12h
+    active-write-back: 1m
+  security:
+    login-fail-threshold: 5
+    lock-duration: 15m
+    reset-token-expire: 30m
+    email-token-expire: 24h
+    console-base-url: https://tms.example.com
+  storage:
+    endpoint: http://127.0.0.1:9000
+    access-key: minioadmin
+    secret-key: minioadmin
+    bucket: tms
+    presigned-minutes: 5
+  api-log:
+    retention-days: 30
+  init:
+    admin-account: admin
+    admin-password: Tms@12345
+  schedule:
+    session-clean-cron: 0 */5 * * * ?
+    api-log-clean-cron: 0 30 1 * * ?
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId}] %logger{36} - %msg%n"
+  level:
+    com.zxinfotek.tms: info
