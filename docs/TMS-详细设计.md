@@ -442,7 +442,16 @@ flowchart TD
 10. 新增系统功能产生的新权限码纳入权限目录并自动加入内置管理员角色，不自动授予已有自定义角色。**例外**：`keys`、`rki`、`rki-records` 三个菜单的权限码不进入任何内置角色，必须由自定义角色显式授予（7.3）。
 11. 角色被成员引用时不能删除，只能停用。
 12. 角色权限或状态变更后自增该角色的权限版本，受影响成员的下一次请求按新权限校验。
-13. 不得移除本机构最后一名管理员的必要管理权限。
+13. 不得移除本机构最后一名管理员的必要管理权限。必要管理权限指 `members:edit` 与 `members:assign`；任何角色或成员改动生效后，机构内必须仍有至少一名启用成员同时持有这两项，否则整体拒绝。
+14. 内置角色的权限码由权限目录推导，不单独维护清单：
+
+| 内置角色 | 权限构成 | 数据范围 |
+|---|---|---|
+| 平台管理员 `PLATFORM_ADMIN` | 全部权限码，去除 `keys`、`rki`、`rki-records` 三个菜单 | 成员所属机构及下级 |
+| 客户管理员 `TENANT_ADMIN` | 全部 `platform_only = 0` 的权限码，去除上述三个菜单 | 成员所属机构及下级 |
+| 机构管理员 `BRANCH_ADMIN` | 客户管理员的权限码再去除 `roles` 菜单（角色目录由客户管理员维护） | 成员所属机构及下级 |
+
+平台内置角色在服务启动时同步；客户与机构内置角色在创建客户时按客户根机构创建，归属机构为客户根机构，因而对该客户下各级机构均可分配。权限目录新增权限码时，三个内置角色按上表规则自动补齐。
 
 #### 3.2.6 异常场景
 
@@ -570,7 +579,7 @@ flowchart TD
 
 #### 3.4.7 幂等与并发
 
-机构创建与其管理员创建在同一事务内完成；`org_path` 在插入后回填（依赖自增主键），同一事务内完成，不存在中间可见状态。
+机构创建与其管理员创建在同一事务内完成；主键由雪花算法在插入前生成，`org_path` 由上级路径拼接本级主键后随记录一次写入，不存在中间可见状态。
 
 #### 3.4.8 涉及数据与接口
 
@@ -1227,6 +1236,7 @@ erDiagram
 | 认证 | 除登录、找回密码外均需 `Authorization: Bearer {token}` |
 | 鉴权 | 每个接口在代码中声明 `@RequiresPerm`，无声明的业务接口不允许合入 |
 | 时间格式 | 请求与响应统一 `yyyy-MM-dd'T'HH:mm:ss.SSS'Z'`（UTC） |
+| 主键格式 | 雪花算法主键超出 JavaScript 安全整数范围，响应中统一序列化为字符串；请求侧字符串与数字均可接受 |
 | 分页 | 请求 `pageNum` 从 1 开始、`pageSize` 默认 20 最大 200 |
 | 幂等 | 写操作需要幂等时由客户端传 `Idempotency-Key` 请求头 |
 | 文件 | 上传用 `multipart/form-data`，下载与导出返回对象存储的临时链接 |
@@ -1345,6 +1355,7 @@ erDiagram
 | PUT | `/api/tenants/{id}` | 编辑客户 | `customers:edit` |
 | POST | `/api/tenants/{id}/status` | 启用或停用客户 | `customers:toggle` |
 | DELETE | `/api/tenants/{id}` | 删除客户 | `customers:delete` |
+| GET | `/api/tenants/feature-options` | 客户功能授权可选菜单，新增客户时渲染勾选项 | `customers:authorize` |
 | GET | `/api/tenants/{id}/features` | 查询客户功能授权 | `customers:authorize` |
 | PUT | `/api/tenants/{id}/features` | 保存客户功能授权 | `customers:authorize` |
 | GET | `/api/tenants/export` | 导出客户 | `customers:export` |
@@ -1404,7 +1415,7 @@ erDiagram
 | GET | `/api/login-logs/export` | 导出登录日志 | `logins:export` |
 | GET | `/api/sessions` | 在线会话分页查询 | `sessions:view` |
 | POST | `/api/sessions/{id}/force-logout` | 强制下线单条会话 | `sessions:force` |
-| GET | `/api/sessions/export` | 导出在线会话 | `sessions:export` |
+| GET | `/api/sessions/export` | 导出在线会话 | `sessions:view` |
 
 `POST /api/sessions/{id}/force-logout` 请求体必填 `reason`；当前会话不允许作为目标，返回 `SESSION_003`。
 
@@ -1880,7 +1891,7 @@ ECB／CBC 统一约定 NoPadding，不设置整文件公共 IV。KCV 约定：TD
 |---|---|
 | 功能权限 | 方法上的 `@RequiresPerm("devices:stockout")`，AOP 在会话权限表中查找该权限码，不存在即返回 403 |
 | 数据范围 | 同一切面取出该权限码对应的数据范围写入请求上下文 |
-| SQL 过滤 | MyBatis 拦截器读取上下文，对标注 `@DataScope` 的 Mapper 方法追加 `tenant_id = ?`，并按范围追加 `org_id = ?` 或 `org_path LIKE ?` |
+| SQL 过滤 | MyBatis 拦截器读取上下文，对标注 `@DataScope` 的 Mapper 方法追加 `tenant_id = ?`（平台账户跳过该条件），并按范围追加 `org_id = ?` 或 `org_path LIKE ?`；租户条件与机构范围条件由同一个拦截器一次性追加，列名可在注解上按表指定（如角色表的 `owner_org_id` / `owner_org_path`） |
 | 单条校验 | 按 ID 操作单条记录时，除范围过滤外再校验该记录的 `org_path` 是否在成员范围内，防止越权改单条 |
 
 前端隐藏菜单不构成权限控制；每个请求都必须在服务端完成上述校验。
@@ -2128,6 +2139,8 @@ flowchart TB
 ### 9.2 错误码
 
 格式为 `模块前缀_三位序号`。HTTP 状态码表达大类，业务错误码表达具体原因。
+
+错误码枚举按模块归属：`COMMON_` 与 `PERM_` 在 `tms-common`（基础设施与各模块共同使用），`AUTH_`、`TENANT_`、`ORG_`、`MEMBER_`、`ROLE_`、`SESSION_` 在 `tms-core.iam`，`PRODUCT_` 在 `tms-core.product`。
 
 | 错误码 | HTTP | 说明 |
 |---|---|---|
