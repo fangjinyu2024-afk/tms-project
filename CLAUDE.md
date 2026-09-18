@@ -1,0 +1,189 @@
+# CLAUDE.md
+
+本文件为在本仓库工作的开发人员与 AI 助手提供工程约定。**这里写的是规则，不是设计**；业务设计与技术方案在 `docs/TMS-详细设计.md`。
+
+## 项目性质
+
+TMS 终端管理系统：POS 终端交付后的集中管理平台，覆盖设备激活与初始化、OTA 升级、RKI 远程密钥分发、设备模式控制，以及客户、机构、账户权限、产品型号、设备流转、证书与日志管理。
+
+**当前阶段：设计资料仓，后端与前端均未开始实现。** 仓库中只有需求、协议和设计文档。
+
+## 文档权威优先级
+
+出现冲突时按以下顺序取舍，高优先级覆盖低优先级：
+
+1. 本轮对话中用户明确确认的结论
+2. `docs/TMS-详细设计.md` —— 架构、数据模型、接口、状态枚举、技术机制
+3. `docs/TMS-功能清单.md` —— 业务规则唯一来源
+4. `docs/protocol/README.md` 的「已确认结论」小节
+5. `docs/protocol/*.md` —— 由 Word 原文转换的协议规范
+6. `docs/protocol/原始文档/*.doc` —— 原始权威版本
+7. `prototype/TMS-原型.html` —— 低保真原型
+
+原型与功能清单冲突时，以功能清单中本轮确认的规则为准。协议 Markdown 与原始 Word 冲突时以原始文档为准，但 README 的「已确认结论」优先于两者。
+
+**改了设计就要同步文档**：任何影响数据模型、接口契约、状态枚举或权限模型的改动，必须同步更新 `docs/TMS-详细设计.md` 的对应章节，不允许代码与文档各说各话。
+
+## 技术栈
+
+| 层次 | 技术 |
+|---|---|
+| 后端 | Java 17、Spring Boot 3.2、MyBatis-Plus 3.5、Netty 4.1、BouncyCastle 1.78、EasyExcel 3.3 |
+| 数据 | MySQL 8.0（InnoDB / utf8mb4）、Redis 7、MinIO（S3 协议） |
+| 前端 | Vue 3、TypeScript、Vite、Element Plus、Pinia |
+| 构建 | Maven 3.9 |
+| 坐标 | groupId `com.zxinfotek`，根包 `com.zxinfotek.tms` |
+
+## 工程结构
+
+```text
+tms-project/
+├── docs/          设计文档与协议规范
+├── prototype/     低保真原型
+├── zx-tms/        后端 Maven 聚合工程
+└── tms-web/       前端 Vue 3 工程
+```
+
+后端 10 个模块，依赖方向严格单向、无环：
+
+```text
+common ──┬── crypto ────────────────────────┐
+         └── infra ── task ── core ──┬── activation ──┐
+                                     ├── ota ─────────┼── admin
+                                     └── rki ─────────┴── gateway
+```
+
+| 模块 | 职责 |
+|---|---|
+| `tms-common` | Result、异常、错误码、分页、BaseEntity、脱敏、雪花 ID、UTC 时间工具 |
+| `tms-crypto` | RSA / AES / CMAC / KCV / TR-31 / LRC / 签名验签。零业务依赖 |
+| `tms-infra` | DB / Redis / MinIO / Mail / Lock / MyBatis 技术组件 |
+| `tms-task` | 通用任务、Assignment、Attempt、任务状态机 |
+| `tms-core` | iam / audit / product / device / cert |
+| `tms-activation` | 激活握手、激活会话、设备初始化 |
+| `tms-ota` | 升级包、OTA 任务、查询 / 下载 / 上报 |
+| `tms-rki` | RKI 认证、密钥交换、下载、断点续传 |
+| `tms-admin` | 【可执行】Spring Boot 管理后台 |
+| `tms-gateway` | 【可执行】TCP 设备接入 |
+
+模块内部包结构：
+
+```text
+com.zxinfotek.tms.{module}
+├── api/            对外 Service 接口与 DTO —— 唯一允许被其他模块引用的包
+├── entity/
+├── mapper/
+├── service/impl/
+├── enums/
+└── converter/
+```
+
+### 跨模块红线
+
+1. **`tms-task` 不得依赖 `tms-core`。** 执行项只持有 `device_id` 与 `org_path`，不引用设备实体；需要设备信息时通过 `TaskTargetResolver` 接口回调。违反即产生循环依赖。
+2. **跨模块只能引用对方 `api` 包**，不得引用 `entity`、`mapper`、`service.impl`。
+3. **禁止跨模块 SQL join。** 需要跨域字段时先查主表，再按 ID 批量补全。
+4. **禁止跨模块事务。** 拆为本模块事务加对方接口调用，失败时业务补偿。
+5. 以上由 `tms-core` 测试目录的 ArchUnit 规则与代码审查共同保证。
+
+## 编码规范
+
+- 所有 HTTP 接口返回 `Result<T>`，不直接返回实体；异常由全局处理器包装，业务代码不自行拼装错误响应。
+- 异常分类：`BizException`(400)、`AuthException`(401)、`PermissionException`(403)、`NotFoundException`(404)、`ConflictException`(409)。不用返回码表达失败。
+- 错误码格式 `模块前缀_三位序号`，集中在各模块的错误码枚举中定义，不在业务代码里写字面量。
+- 对象命名：`XxxEntity` 数据库实体、`XxxDTO` 跨模块传输、`XxxVO` 接口响应、`XxxQuery` 查询参数、`XxxRequest` 接口请求。实体不直接暴露给接口层。
+- Controller 不允许直接注入 Mapper，必须经过 Service。
+- Service 方法参数不允许出现 `HttpServletRequest`，请求上下文从 `RequestContextHolder` 取。
+- 不使用 `System.out`；日志用 SLF4J，异常必须带上下文，不写 `log.error(e.getMessage())` 这种丢堆栈的写法。
+- 时间类型统一 `Instant` 或 `LocalDateTime` + `ZoneOffset.UTC`，禁止依赖 JVM 默认时区。
+
+## 数据库约定
+
+- 表名 `t_` 前缀，统计表 `t_stat_` 前缀，小写下划线。
+- 主键 `id BIGINT UNSIGNED`，雪花算法生成，不用自增。
+- 时间字段 `DATETIME(3)`，**统一存 UTC**，禁止 `TIMESTAMP`。
+- 公共字段：`create_by`、`create_by_name`、`create_time`、`update_by`、`update_by_name`、`update_time`。冗余操作人姓名，避免改名导致历史记录失真。
+- 业务数据表必须有 `tenant_id`（平台为 0）；按机构归属的表必须有 `org_id` 与 `org_path`。
+- 主数据表逻辑删除用 `deleted TINYINT`；日志、流水、记录类表不做逻辑删除。
+- **不建物理外键**，关系由应用层保证。
+- **业务唯一性必须有数据库唯一索引兜底**，不能只靠 Service 查询判重。
+- 状态字段存英文编码字符串，取值以 `docs/TMS-详细设计.md` 第 6 章为唯一来源，代码与数据库都不另行维护枚举。
+
+## 权限红线
+
+- **任何新增业务接口必须声明 `@RequiresPerm` 并确定数据范围**，无声明的接口不允许合入。前端隐藏菜单不构成权限控制。
+- 有效权限的数据结构是 `Map<权限码, 数据范围>`，**不是「权限码集合 + 全局数据范围」两个独立字段**。同一权限码多角色时取最大数据范围；不同权限码各自独立，不允许跨角色拼接。
+- 权限码取自系统权限目录，不允许用户自建或在代码里临时造新权限码；新增权限码要同步登记到详细设计 6.2.2。
+- 按 ID 操作单条记录时，除 SQL 范围过滤外还要校验该记录的 `org_path` 是否在成员范围内。
+- 平台专属菜单（`customers`、`products`、`mode`、`grants`、`codes`、`cas`、`servercerts`）不向客户账户开放；RKI 三个菜单（`keys`、`rki`、`rki-records`）不向平台账户开放。
+
+## 安全红线
+
+以下内容**禁止落库、禁止写日志、禁止出现在接口响应与导出文件中**：
+
+- 登录密码明文（只存 BCrypt 哈希）
+- 会话令牌明文（只存 SHA-256 哈希）
+- 完整授权码（只保留末 4 位）
+- CA 私钥、服务证书私钥明文（加密存储，主密钥与密文分开存放）
+- 支付密钥明文、密钥分量、合成密钥（只在受控导入会话内处理，结束即释放）
+- 上传文件原文、请求体与响应体全量
+
+设备报文记录的脱敏规则：传输密钥、签名、终端状态密文只保存前后各 4 字节及长度；A1 下发的密钥数据、A3 密钥块、OTA 下载数据一律不保存。
+
+所有签名、加解密、证书签发必须走 `tms-crypto` 的 `CryptoService` 接口，不在业务代码里直接调用 JCA 或 BouncyCastle，以便后续替换为加密机实现。
+
+## 设备协议实现约束
+
+- **按字段位置对齐，不按字段名对齐。** 原文中下载请求、激活报文的命令码字段写作 `responseCode`，激活响应出现两行 `orderCode`，属原文笔误。
+- 响应码只取自 `docs/protocol/README.md` 的全局响应码表，**禁止在单个命令处理器内自定义响应码**；平台内部错误统一映射为 `05 系统忙`。
+- 命令码与响应码是两套独立编号，数值可重复，解码时按报文位置区分。
+- 报文长度字段的编码与口径尚未与终端方确认（详细设计 9.3 项 A），解码参数集中在一个常量类中，确认后单点修改，不要散落在各处理器里。
+- A0→A1、A2→A3 必须在同一条 TCP 连接内完成，握手上下文以连接属性为主、Redis 为备。
+
+## 代码注释规范
+
+**只有核心业务代码写注释**：业务规则判定、状态流转、密码学运算、协议编解码、权限与数据范围计算。CRUD、getter/setter、简单对象转换、Controller 透传方法**不写注释**。
+
+**注释只写「这段代码在业务上做什么」**，面向后续维护的开发人员。禁止在代码注释里写设计思路、方案选型理由、为什么这样做、重要提醒、待确认事项、需求变更历史——这些放 `docs/TMS-详细设计.md` 对应章节，代码里最多引用章节号。
+
+类注释模板：
+
+```java
+/**
+ * 激活会话处理，负责 A0 握手与 A1 激活的会话校验与密钥下发。
+ *
+ * @author 张三
+ * @since 2026-09-18
+ */
+```
+
+方法注释模板：
+
+```java
+/**
+ * 校验并原子占用一次性授权码，成功后建立激活会话。
+ *
+ * @author 张三
+ * @since 2026-09-18
+ */
+```
+
+- 功能描述尽量一句话
+- 参数或返回值含义不能从名称自解释时才写 `@param` / `@return`
+- 注释用中文
+
+## 提交信息
+
+格式 `<type>: <简要说明>`，中文描述。type 取值：`feat`、`fix`、`refactor`、`docs`、`test`、`chore`、`perf`。一次提交只做一件事，不把无关改动混在一起。
+
+## 本期不做
+
+以下内容不在当前交付范围，不要主动实现：
+
+- 8583 报文解析、签到、消费等 UPTS 认证测试能力
+- 硬件加密机接入（本期纯软实现，但接口预留）
+- 证书吊销列表（CRL）发布
+- 设备端应用日志与崩溃日志采集
+- 机构与成员的邮件邀请（统一走直接创建 + 系统随机密码 + 首登强制改密）
+- 国际化与英文页面（保留语言入口，只做中文）
+- 母 POS 串口本地导入主密钥（不经 TMS 网络）
