@@ -1,0 +1,36 @@
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  font-family: 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  background: #f3f6fa;
+}
+
+.page {
+  padding: 16px;
+}
+
+.page-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.page-toolbar .grow {
+  flex: 1;
+}
+
+.table-hint {
+  margin: 8px 0;
+  color: #66778d;
+  font-size: 13px;
+}
+
+.form-tip {
+  color: #66778d;
+  font-size: 12px;
+  line-height: 1.6;
+}
