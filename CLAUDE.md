@@ -172,6 +172,11 @@ com.zxinfotek.tms.{module}
 - 参数或返回值含义不能从名称自解释时才写 `@param` / `@return`
 - 注释用中文
 
+## 分支策略
+
+- **所有开发与提交统一在 `master` 分支进行，不创建特性分支。**
+- 直接提交并推送到 `origin/master`，不走 PR 流程。
+
 ## 提交信息
 
 格式 `<type>: <简要说明>`，中文描述。type 取值：`feat`、`fix`、`refactor`、`docs`、`test`、`chore`、`perf`。一次提交只做一件事，不把无关改动混在一起。
