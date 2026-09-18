@@ -145,22 +145,22 @@ flowchart LR
 
 ### 2.4 系统角色与权限
 
-有效权限由四个条件共同决定，缺一不可：
+有效权限由三个条件共同决定，缺一不可：
 
 ```mermaid
 flowchart LR
-    A[账户边界<br/>平台 / 客户] --> D[有效权限]
-    B[客户已开通功能<br/>功能授权上限] --> D
-    C[成员角色授权<br/>权限码并集] --> D
-    E[数据范围<br/>按权限码单独计算] --> D
+    A[租户已开通菜单<br/>平台与客户同一模型] --> D[有效权限]
+    B[成员角色授权<br/>权限码并集] --> D
+    C[数据范围<br/>按权限码单独计算] --> D
 ```
 
 | 条件 | 说明 |
 |---|---|
-| 账户边界 | 平台专属模块对客户账户不可见、不可授权，详见 6.2.1 |
-| 客户已开通功能 | 平台为客户开通的菜单是该客户的权限上限，详见 3.3 |
+| 租户已开通菜单 | 平台与客户都是租户，都有功能授权记录；平台默认开通全部菜单，客户在创建时分配，详见 3.3 |
 | 成员角色授权 | 成员多个角色的权限码取并集，详见 3.2 |
 | 数据范围 | 仅成员所属机构／成员所属机构及下级，按权限码单独计算，不跨角色拼接，详见 7.1 |
+
+菜单与操作对平台、客户的适用性由权限目录的 `platform_only` 字段承载（6.2.1），不是代码中的硬编码名单；运行时平台与客户走完全相同的计算路径，没有按账户类型分支的逻辑。
 
 **默认角色**
 
@@ -414,16 +414,15 @@ stateDiagram-v2
 ```mermaid
 flowchart TD
     A[取成员的启用角色] --> B[取各角色权限码与数据范围]
-    B --> C[按账户边界过滤平台专属权限]
-    C --> D{账户边界为客户?}
-    D -- 是 --> E[按客户已开通功能过滤]
-    D -- 否 --> F[跳过功能上限过滤]
-    E --> G[按权限码合并, 同码取最大数据范围]
-    F --> G
-    G --> H[写入会话上下文]
+    B --> C[按所属租户已开通菜单过滤]
+    C --> D[按权限目录 platform_only 过滤]
+    D --> E[按权限码合并, 同码取最大数据范围]
+    E --> F[写入会话上下文]
 ```
 
-**可授予权限计算**：操作者新建或编辑角色时，可勾选集合 = 操作者自身有效权限 ∩ 目标机构账户边界内权限 ∩ 该客户已开通功能。目标角色已有但操作者无权维护的权限项保留且只读。
+平台与客户共用该流程：平台租户的已开通菜单为全部 25 项，`platform_only` 过滤对平台不生效。
+
+**可授予权限计算**：操作者新建或编辑角色时，可勾选集合 = 操作者自身有效权限 ∩ 目标租户已开通菜单的权限码 ∩ 权限目录允许该租户使用的权限码。目标角色已有但操作者无权维护的权限项保留且只读。
 
 #### 3.2.4 状态设计
 
@@ -433,14 +432,14 @@ flowchart TD
 
 1. 权限目录由系统维护，来源为代码常量，服务启动时同步到 `t_permission`；不允许用户自建权限码或填写权限编码。
 2. 权限码格式为 `菜单键:操作`，菜单与操作清单见 6.2.2。
-3. 平台专属菜单（6.2.1）在客户角色页面直接隐藏；RKI 相关菜单（`keys`、`rki`、`rki-records`）不向平台账户提供。
-4. 设备菜单的入库、出库、退货回收三项操作仅平台账户可配置，客户账户只有查看、转移、报废、导出。
+3. 菜单与操作对平台、客户的适用性由权限目录的 `platform_only` 字段决定（6.2.1）；`platform_only = 1` 的权限码在客户角色页面直接隐藏。代码中不得出现硬编码菜单名单。
+4. `platform_only` 是权限码级而非菜单级：设备菜单客户可见，但其中的入库、出库、退货回收三项操作仅平台可配置，客户账户只有查看、转移、报废、导出。
 5. 同一机构内角色名称唯一。
 6. 归属机构是创建并维护该角色的机构，只有该机构有权限的成员可以编辑；可管理范围是持有该角色的成员能访问的机构范围，取值为仅成员所属机构、成员所属机构及下级，默认后者。
 7. 勾选任一业务操作时自动勾选该菜单的查看权限；取消查看时同步取消该菜单下可编辑的操作权限；保存时再次校验依赖。
 8. 只能新增或移除操作者当前有权授予的权限；复制角色时只带入当前可授予部分。
 9. 内置角色（平台管理员、客户管理员、机构管理员）不提供编辑、启停和删除，列表中标注“内置”。
-10. 新增系统功能产生的新权限码纳入权限目录并自动加入内置管理员角色，不自动授予已有自定义角色。
+10. 新增系统功能产生的新权限码纳入权限目录并自动加入内置管理员角色，不自动授予已有自定义角色。**例外**：`keys`、`rki`、`rki-records` 三个菜单的权限码不进入任何内置角色，必须由自定义角色显式授予（7.3）。
 11. 角色被成员引用时不能删除，只能停用。
 12. 角色权限或状态变更后自增该角色的权限版本，受影响成员的下一次请求按新权限校验。
 13. 不得移除本机构最后一名管理员的必要管理权限。
@@ -484,7 +483,9 @@ flowchart TD
 
 #### 3.3.3 核心流程
 
-**创建客户**：填写客户资料与关联型号 → 创建客户记录 → 创建该客户的根机构 → 创建客户管理员成员并分配内置客户管理员角色 → 写入默认功能授权。四步在同一事务内完成。
+**创建客户**：填写客户资料与关联型号 → 创建客户记录 → 创建该客户的根机构 → 创建客户管理员成员并分配内置客户管理员角色 → 按本次勾选的菜单写入功能授权。四步在同一事务内完成。
+
+可勾选菜单为权限目录中存在至少一个 `platform_only = 0` 权限码的菜单，共 20 个；`home` 强制包含且不可取消。
 
 #### 3.3.4 状态设计
 
@@ -495,9 +496,9 @@ flowchart TD
 1. 客户名称在平台内唯一。
 2. 客户不保留联系邮箱属性；客户管理员的个人邮箱在成员管理中维护。
 3. 客户与其根机构一一对应，根机构 `org_type` 为客户根机构，`parent_id` 为平台根机构。
-4. 平台为固定客户（租户编号 0），根机构名称恒为“平台”，不随部署方公司名称变化。
+4. 平台为固定客户（租户编号 0），根机构名称恒为“平台”，不随部署方公司名称变化。平台租户同样有功能授权记录，初始化为全部 25 个菜单，页面不提供平台功能授权入口。
 5. 客户可关联多个产品型号；存在归属设备或业务引用的型号不能取消关联。
-6. 功能授权可选项为全部菜单去除平台专属菜单（6.2.1），工作台始终保留且不可取消。
+6. 功能授权可选项为权限目录中存在至少一个 `platform_only = 0` 权限码的菜单（共 20 个，见 6.2.1），工作台始终保留且不可取消。
 7. 功能授权是该客户的权限上限，成员实际权限还需角色授权。
 8. 关闭功能后限制新的访问与操作，保留业务数据与角色配置，不自动停止已发布任务；再次开通后原角色中保留的授权恢复生效。
 9. 存在设备、任务或下级机构的客户不能删除。
@@ -880,6 +881,8 @@ flowchart TD
 
 不保留客户联系邮箱字段；客户管理员邮箱在 `t_member` 维护。
 
+平台为固定记录 `id = 0`，其功能授权初始化为全部 25 个菜单，页面不提供平台功能授权入口；平台与客户共用同一套租户模型，运行时不按账户类型分支。
+
 #### 4.3.2 `t_tenant_feature` 客户功能授权表
 
 客户可用菜单上限，一行一个菜单。
@@ -896,6 +899,8 @@ flowchart TD
 | `uk_tenant_menu` | `tenant_id`, `menu_key` | 唯一 | 防重复开通 |
 
 关闭功能时删除对应行，角色中的权限配置保留；再次开通后原授权自动恢复生效。
+
+**平台租户（`tenant_id = 0`）同样有记录**，初始化写入全部 25 个菜单，系统升级新增菜单时自动补写。这样有效权限计算对平台与客户是同一条代码路径，不需要按账户类型跳过功能上限校验。
 
 #### 4.3.3 `t_org` 机构表
 
@@ -1018,8 +1023,7 @@ flowchart TD
 | `group_name` | VARCHAR(50) | 是 | — | 菜单分组 |
 | `action` | VARCHAR(30) | 是 | — | 操作，取值见 6.2.2 |
 | `action_name` | VARCHAR(30) | 是 | — | 操作名称 |
-| `platform_only` | TINYINT | 是 | 0 | 是否平台专属 |
-| `tenant_only` | TINYINT | 是 | 0 | 是否客户专属（RKI 三菜单） |
+| `platform_only` | TINYINT | 是 | 0 | 是否仅平台账户可用，**权限码级**而非菜单级 |
 | `sort` | INT | 是 | 0 | 排序 |
 | `status` | VARCHAR(20) | 是 | `ENABLED` | 目录中已移除的权限置为停用，不物理删除 |
 
@@ -1027,6 +1031,9 @@ flowchart TD
 |---|---|---|---|
 | `uk_perm_code` | `perm_code` | 唯一 | 同步时按此 upsert |
 | `idx_menu` | `menu_key`, `sort` | 普通 | 页面按菜单分组展示 |
+| `idx_platform_only` | `platform_only`, `menu_key` | 普通 | 计算客户功能授权可选菜单 |
+
+`platform_only` 承载账户边界，取值清单见 6.2.1。代码中不得再维护硬编码的平台专属菜单名单；新增菜单只需在权限目录初始化数据中标注该字段。
 
 #### 4.3.9 `t_login_session` 登录会话表
 
@@ -1320,7 +1327,9 @@ erDiagram
 
 #### 5.4.1 `GET /api/permissions/catalog`
 
-请求参数 `orgId`（目标机构，决定账户边界与客户功能上限）。响应按菜单分组返回，每个菜单包含菜单键、名称、分组、可配置操作列表，以及每个操作的 `grantable` 标记——不可授予项返回但置灰，不从响应中剔除，便于页面展示已有的只读权限。
+请求参数 `orgId`（目标机构，用于定位租户及其已开通菜单）。响应按菜单分组返回，每个菜单包含菜单键、名称、分组、可配置操作列表，以及每个操作的 `grantable` 标记——不可授予项返回但置灰，不从响应中剔除，便于页面展示已有的只读权限。
+
+目标租户非平台时，`platform_only = 1` 的权限码不出现在响应中。
 
 #### 5.4.2 `PUT /api/roles/{id}`
 
@@ -1348,7 +1357,9 @@ erDiagram
 
 #### 5.5.1 `PUT /api/tenants/{id}/features`
 
-请求体为 `menuKeys` 数组。服务端校验菜单键均存在且非平台专属，`home` 强制包含。保存成功后自增 `feature_version`，该客户全部成员的下一次请求按新范围校验（7.2）。响应返回本次新增与关闭的菜单清单，供页面提示影响范围。
+请求体为 `menuKeys` 数组。服务端校验每个菜单键存在，且该菜单至少有一个 `platform_only = 0` 的权限码；`home` 强制包含。保存成功后自增 `feature_version`，该客户全部成员的下一次请求按新范围校验（7.2）。响应返回本次新增与关闭的菜单清单，供页面提示影响范围。
+
+该接口只用于客户租户；平台租户恒为全开，不提供修改入口。
 
 ### 5.6 机构接口
 
@@ -1467,52 +1478,71 @@ flowchart TD
 
 #### 6.2.1 账户边界与菜单可见性
 
+账户边界不是代码中的菜单名单，而是权限目录 `t_permission.platform_only` 字段（4.3.8）承载的目录数据，粒度为**权限码**而非菜单。新增菜单时只改权限目录初始化数据，不改代码。
+
 | 边界 | 编码 | 说明 |
 |---|---|---|
 | 平台 | `PLATFORM` | `tenant_id = 0` 的机构与成员 |
 | 客户 | `TENANT` | `tenant_id > 0` 的机构与成员 |
 
-| 菜单归属 | 菜单键 | 说明 |
+**`platform_only = 1` 的权限码**
+
+| 菜单 | 范围 | 原因 |
 |---|---|---|
-| 平台专属 | `customers`、`products`、`mode`、`grants`、`codes`、`cas`、`servercerts` | 客户账户不可见、不可授权 |
-| 客户专属 | `keys`、`rki`、`rki-records` | 密钥资源按客户隔离，不向平台账户提供 |
-| 双方可用 | 其余 15 个菜单 | 平台与客户均可配置 |
+| `customers` | 全部操作 | 客户去管理客户在数据范围上不成立 |
+| `products` | 全部操作 | 型号是平台主数据，客户只能使用不能维护 |
+| `mode` | 全部操作 | 功能清单明确模式设置仅平台可操作 |
+| `cas` | 全部操作 | 平台只有一套 CA，不属于任何客户 |
+| `servercerts` | 全部操作 | 同上，平台自身服务证书 |
+| `devices` | 仅 `stockin`、`stockout`、`return` | 平台库存出入库属于平台边界；设备菜单本身客户可用 |
 
-平台可用菜单共 22 个，客户功能授权可选菜单共 18 个（`home` 强制包含且不可取消）。
+其余权限码 `platform_only = 0`。
 
-设备菜单的操作按边界差异：`stockin`、`stockout`、`return` 仅平台账户可配置，客户账户只有 `view`、`transfer`、`scrap`、`export`。
+**数量口径**
+
+| 项 | 数量 |
+|---|---|
+| 平台可用菜单 | 25（全部） |
+| 客户功能授权可选菜单 | 20（`home` 强制包含且不可取消） |
+| 全部权限码 | 120 |
+
+平台与客户共用同一套租户功能授权模型：平台租户（`tenant_id = 0`）的功能授权初始化为全部 25 个菜单（4.3.2），客户租户在创建时分配。有效权限计算对两者是同一条路径，运行时没有按账户类型分支的逻辑。
+
+**RKI 三菜单**（`keys`、`rki`、`rki-records`）对平台可用且默认开通，但**不进入任何内置角色**，平台人员需由自定义角色显式授予，详见 7.3。
+
+**与原型的已知差异**：`prototype/TMS-原型.html` 的 `PLATFORM_ONLY` 常量仍含 `grants`、`codes`，且对平台排除 RKI 三菜单，与本节不一致。原型的账户判断分散在多处条件渲染中，同步改造是独立工作，本文档为准。
 
 #### 6.2.2 权限目录
 
 权限码格式 `菜单键:操作`，全量 25 个菜单、120 个权限码如下。
 
-| 分组 | 菜单键 | 菜单名称 | 可配置操作 |
-|---|---|---|---|
-| — | `home` | 工作台 | view |
-| 设备管理 | `devices` | 设备列表 | view、stockin、stockout、transfer、return、scrap、export |
-| 设备管理 | `groups` | 设备分组 | view、create、edit、delete、import、export |
-| 设备管理 | `operations` | 流转记录 | view、revoke、export |
-| 设备管理 | `mode` | 设备模式任务 | view、create、edit、publish、stop、copy、delete、export |
-| 远程维护 | `packages` | 升级包管理 | view、create、edit、upload、toggle、delete、export |
-| 远程维护 | `ota` | OTA 任务 | view、create、edit、publish、stop、copy、delete、export |
-| 远程维护 | `ota-records` | OTA 执行记录 | view、export |
-| 远程维护 | `keys` | 密钥管理 | view、import、edit、toggle、export |
-| 远程维护 | `rki` | RKI 任务 | view、create、edit、publish、stop、copy、delete、export |
-| 远程维护 | `rki-records` | RKI 执行记录 | view、export |
-| 激活与证书 | `grants` | 激活授权 | view、create、edit、toggle、export |
-| 激活与证书 | `codes` | 授权码记录 | view、create、revoke、export |
-| 激活与证书 | `activations` | 设备激活记录 | view、export |
-| 激活与证书 | `cas` | CA 管理 | view、generate、import、toggle、provision、export |
-| 激活与证书 | `certs` | 设备证书 | view、export |
-| 激活与证书 | `servercerts` | 平台服务证书 | view、sign、import、toggle、export |
-| 系统管理 | `customers` | 客户管理 | view、create、edit、toggle、delete、authorize、export |
-| 系统管理 | `orgs` | 机构管理 | view、create、edit、toggle、delete、export |
-| 系统管理 | `members` | 成员管理 | view、create、edit、toggle、delete、reset、assign、export |
-| 系统管理 | `roles` | 角色管理 | view、create、edit、toggle、delete、copy、export |
-| 系统管理 | `products` | 产品与型号 | view、create、edit、delete、export |
-| 系统管理 | `logs` | 操作日志 | view、export |
-| 系统管理 | `logins` | 登录日志 | view、export |
-| 系统管理 | `sessions` | 在线会话 | view、force |
+| 分组 | 菜单键 | 菜单名称 | 可配置操作 | 平台专属 |
+|---|---|---|---|---|
+| — | `home` | 工作台 | view | — |
+| 设备管理 | `devices` | 设备列表 | view、stockin、stockout、transfer、return、scrap、export | 仅 stockin、stockout、return |
+| 设备管理 | `groups` | 设备分组 | view、create、edit、delete、import、export | — |
+| 设备管理 | `operations` | 流转记录 | view、revoke、export | — |
+| 设备管理 | `mode` | 设备模式任务 | view、create、edit、publish、stop、copy、delete、export | 全部操作 |
+| 远程维护 | `packages` | 升级包管理 | view、create、edit、upload、toggle、delete、export | — |
+| 远程维护 | `ota` | OTA 任务 | view、create、edit、publish、stop、copy、delete、export | — |
+| 远程维护 | `ota-records` | OTA 执行记录 | view、export | — |
+| 远程维护 | `keys` | 密钥管理 | view、import、edit、toggle、export | — |
+| 远程维护 | `rki` | RKI 任务 | view、create、edit、publish、stop、copy、delete、export | — |
+| 远程维护 | `rki-records` | RKI 执行记录 | view、export | — |
+| 激活与证书 | `grants` | 激活授权 | view、create、edit、toggle、export | — |
+| 激活与证书 | `codes` | 授权码记录 | view、create、revoke、export | — |
+| 激活与证书 | `activations` | 设备激活记录 | view、export | — |
+| 激活与证书 | `cas` | CA 管理 | view、generate、import、toggle、provision、export | 全部操作 |
+| 激活与证书 | `certs` | 设备证书 | view、export | — |
+| 激活与证书 | `servercerts` | 平台服务证书 | view、sign、import、toggle、export | 全部操作 |
+| 系统管理 | `customers` | 客户管理 | view、create、edit、toggle、delete、authorize、export | 全部操作 |
+| 系统管理 | `orgs` | 机构管理 | view、create、edit、toggle、delete、export | — |
+| 系统管理 | `members` | 成员管理 | view、create、edit、toggle、delete、reset、assign、export | — |
+| 系统管理 | `roles` | 角色管理 | view、create、edit、toggle、delete、copy、export | — |
+| 系统管理 | `products` | 产品与型号 | view、create、edit、delete、export | 全部操作 |
+| 系统管理 | `logs` | 操作日志 | view、export | — |
+| 系统管理 | `logins` | 登录日志 | view、export | — |
+| 系统管理 | `sessions` | 在线会话 | view、force | — |
 
 操作编码含义：
 
@@ -1838,9 +1868,11 @@ ECB／CBC 统一约定 NoPadding，不设置整文件公共 IV。KCV 约定：TD
 
 1. 取成员所有启用状态的角色。
 2. 每个角色产生若干 `(权限码, 该角色的数据范围)` 二元组。
-3. 按账户边界过滤：客户账户剔除平台专属菜单的权限码，平台账户剔除客户专属菜单的权限码。
-4. 客户账户再按 `t_tenant_feature` 过滤未开通菜单的权限码。
+3. 按所属租户的 `t_tenant_feature` 过滤未开通菜单的权限码。平台租户开通全部菜单，因此该步对平台不产生剔除，但走的是同一段代码。
+4. 按权限目录 `platform_only` 兜底过滤：租户非平台时剔除 `platform_only = 1` 的权限码。权限目录常驻内存缓存（25 菜单 120 权限码），该步不产生额外查询。
 5. 按权限码合并，同一权限码存在多个数据范围时取较大者（`ORG_AND_SUB > SELF_ORG`）。
+
+第 4 步是防止历史误配置长期生效的兜底；正常路径上 `platform_only = 1` 的权限码在角色保存时就已被可授予集合挡住。两处都读权限目录数据，不含硬编码菜单名单。
 
 执行期校验：
 
@@ -1871,7 +1903,7 @@ ECB／CBC 统一约定 NoPadding，不设置整文件公共 IV。KCV 约定：TD
 
 1. 所有业务数据表带 `tenant_id`，平台数据为 0。
 2. MyBatis 租户拦截器按会话上下文自动追加 `tenant_id` 条件；平台账户跳过该条件但仍受数据范围约束。
-3. 平台可按业务职责跨客户查看设备与任务，但不因此获得客户支付密钥的操作权限——`keys`、`rki`、`rki-records` 三个菜单不向平台账户提供（6.2.1）。
+3. 平台可按业务职责跨客户查看设备与任务。`keys`、`rki`、`rki-records` 三个菜单对平台可用且默认开通，但**不进入任何内置角色**：内置平台管理员角色不含这三个菜单的权限码，平台人员操作客户支付密钥必须由自定义角色显式授予，且该授权动作进操作日志。菜单开通是租户级、权限授予是角色级，两者分开控制。
 4. 明确需要跨租户的查询（如平台工作台的客户设备分布）走白名单标注的 Mapper 方法，跳过租户拦截器，并在代码审查中逐个确认。
 
 ### 7.4 统一异常与错误码
