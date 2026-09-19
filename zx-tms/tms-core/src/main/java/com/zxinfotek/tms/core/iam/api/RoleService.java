@@ -33,6 +33,9 @@ public interface RoleService {
     /** 确保租户的内置角色存在并与权限目录保持一致，返回内置角色 ID。 */
     Long ensureBuiltinRole(Long tenantId, Long ownerOrgId, String ownerOrgPath, BuiltinRole builtinRole);
 
+    /** 按权限目录重算全部已存在的内置角色权限码，返回发生变更的角色数。 */
+    int syncBuiltinRolePermissions();
+
     /** 校验目标角色是否可由当前操作者分配给目标机构的成员。 */
     void assertAssignable(List<Long> roleIds, Long tenantId, String targetOrgPath);
 }

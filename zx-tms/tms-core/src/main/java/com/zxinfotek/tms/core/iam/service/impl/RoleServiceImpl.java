@@ -35,6 +35,8 @@ import com.zxinfotek.tms.infra.context.RequestContext;
 import com.zxinfotek.tms.infra.context.RequestContextHolder;
 import com.zxinfotek.tms.infra.excel.ExcelExportService;
 import com.zxinfotek.tms.infra.i18n.I18nMessages;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,6 +58,8 @@ import java.util.stream.Collectors;
  */
 @Service
 public class RoleServiceImpl implements RoleService {
+
+    private static final Logger log = LoggerFactory.getLogger(RoleServiceImpl.class);
 
     private final RoleMapper roleMapper;
     private final RolePermMapper rolePermMapper;
@@ -292,13 +296,48 @@ public class RoleServiceImpl implements RoleService {
             role.setDeleted(0);
             roleMapper.insert(role);
         }
-        Set<String> expected = new LinkedHashSet<>(builtinRole.permCodes());
-        Set<String> current = new HashSet<>(permCodesOf(role.getId()));
-        if (!current.equals(expected)) {
-            savePermCodes(role.getId(), expected);
-            roleMapper.increasePermVersion(role.getId());
-        }
+        syncPermCodes(role.getId(), builtinRole);
         return role.getId();
+    }
+
+    /**
+     * 按权限目录重算全部已存在的内置角色权限码，权限目录或内置角色构成调整后在启动时补齐（详细设计 3.2.5 第 14 条）。
+     *
+     * @author zxinfotek
+     * @since 2026-09-18
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int syncBuiltinRolePermissions() {
+        List<RoleEntity> roles = roleMapper.selectList(Wrappers.<RoleEntity>lambdaQuery()
+                .isNotNull(RoleEntity::getBuiltinCode));
+        int changed = 0;
+        for (RoleEntity role : roles) {
+            BuiltinRole builtinRole;
+            try {
+                builtinRole = BuiltinRole.valueOf(role.getBuiltinCode());
+            } catch (IllegalArgumentException e) {
+                log.warn("内置角色编码已不在权限模型中，跳过同步，roleId={}, builtinCode={}",
+                        role.getId(), role.getBuiltinCode());
+                continue;
+            }
+            if (syncPermCodes(role.getId(), builtinRole)) {
+                changed++;
+            }
+        }
+        return changed;
+    }
+
+    /** 内置角色权限码与权限目录不一致时整体覆盖，并自增权限版本使在线成员下次请求即生效。 */
+    private boolean syncPermCodes(Long roleId, BuiltinRole builtinRole) {
+        Set<String> expected = new LinkedHashSet<>(builtinRole.permCodes());
+        Set<String> current = new HashSet<>(permCodesOf(roleId));
+        if (current.equals(expected)) {
+            return false;
+        }
+        savePermCodes(roleId, expected);
+        roleMapper.increasePermVersion(roleId);
+        return true;
     }
 
     @Override

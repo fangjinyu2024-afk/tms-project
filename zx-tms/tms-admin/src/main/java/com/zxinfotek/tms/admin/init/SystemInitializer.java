@@ -64,6 +64,10 @@ public class SystemInitializer implements ApplicationRunner {
         Long roleId = roleService.ensureBuiltinRole(IamConstants.PLATFORM_TENANT_ID,
                 IamConstants.PLATFORM_ROOT_ORG_ID, IamConstants.PLATFORM_ORG_PATH,
                 BuiltinRole.PLATFORM_ADMIN);
+        int changed = roleService.syncBuiltinRolePermissions();
+        if (changed > 0) {
+            log.info("已按权限目录同步 {} 个内置角色的权限码", changed);
+        }
         ensurePlatformAdmin(roleId);
     }
 

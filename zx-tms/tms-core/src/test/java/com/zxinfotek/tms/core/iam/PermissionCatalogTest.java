@@ -57,24 +57,39 @@ class PermissionCatalogTest {
     }
 
     @Test
-    @DisplayName("内置角色不含密钥与 RKI 三个菜单的权限码")
-    void builtinRolesExcludeRkiMenus() {
-        for (BuiltinRole role : BuiltinRole.values()) {
+    @DisplayName("内置平台管理员持有全部权限码")
+    void platformAdminHoldsAllPermissions() {
+        assertEquals(PermissionCatalog.permissions().size(), BuiltinRole.PLATFORM_ADMIN.permCodes().size());
+        Set<String> menus = BuiltinRole.PLATFORM_ADMIN.permCodes().stream()
+                .map(code -> code.substring(0, code.indexOf(':'))).collect(Collectors.toSet());
+        assertTrue(menus.contains(MenuKeys.KEYS));
+        assertTrue(menus.contains(MenuKeys.RKI));
+        assertTrue(menus.contains(MenuKeys.RKI_RECORDS));
+    }
+
+    @Test
+    @DisplayName("内置机构管理员不含角色维护权限")
+    void branchAdminExcludesRoleMenu() {
+        Set<String> menus = BuiltinRole.BRANCH_ADMIN.permCodes().stream()
+                .map(code -> code.substring(0, code.indexOf(':'))).collect(Collectors.toSet());
+        assertFalse(menus.contains(MenuKeys.ROLES), "机构管理员不应包含角色管理");
+        assertTrue(menus.contains(MenuKeys.MEMBERS));
+    }
+
+    @Test
+    @DisplayName("客户侧内置角色不含平台专属权限码与支付密钥菜单")
+    void tenantBuiltinRolesExcludePlatformOnly() {
+        for (BuiltinRole role : List.of(BuiltinRole.TENANT_ADMIN, BuiltinRole.BRANCH_ADMIN)) {
+            assertTrue(role.permCodes().stream().noneMatch(PermissionCatalog::isPlatformOnly),
+                    role + " 不应包含平台专属权限码");
             Set<String> menus = role.permCodes().stream()
                     .map(code -> code.substring(0, code.indexOf(':'))).collect(Collectors.toSet());
             assertFalse(menus.contains(MenuKeys.KEYS), role + " 不应包含密钥管理");
             assertFalse(menus.contains(MenuKeys.RKI), role + " 不应包含 RKI 任务");
             assertFalse(menus.contains(MenuKeys.RKI_RECORDS), role + " 不应包含 RKI 执行记录");
         }
-    }
-
-    @Test
-    @DisplayName("客户侧内置角色不含平台专属权限码")
-    void tenantBuiltinRolesExcludePlatformOnly() {
-        for (BuiltinRole role : List.of(BuiltinRole.TENANT_ADMIN, BuiltinRole.BRANCH_ADMIN)) {
-            assertTrue(role.permCodes().stream().noneMatch(PermissionCatalog::isPlatformOnly),
-                    role + " 不应包含平台专属权限码");
-        }
         assertTrue(BuiltinRole.PLATFORM_ADMIN.permCodes().contains("customers:create"));
+        assertEquals(71, BuiltinRole.TENANT_ADMIN.permCodes().size());
+        assertEquals(64, BuiltinRole.BRANCH_ADMIN.permCodes().size());
     }
 }
