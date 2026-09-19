@@ -1,7 +1,7 @@
 package com.zxinfotek.tms.common.enums;
 
 /** 业务模块编码，详细设计 6.2.7。 */
-public enum LogModule {
+public enum LogModule implements Labeled {
 
     DEVICE("设备管理"),
     DEVICE_GROUP("设备分组"),
@@ -31,10 +31,12 @@ public enum LogModule {
         this.label = label;
     }
 
+    @Override
     public String getCode() {
         return name();
     }
 
+    @Override
     public String getLabel() {
         return label;
     }

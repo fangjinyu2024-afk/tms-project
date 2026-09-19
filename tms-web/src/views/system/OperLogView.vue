@@ -2,52 +2,97 @@
   <div class="page">
     <el-card>
       <div class="page-toolbar">
-        <el-input v-model="query.keyword" placeholder="账号、昵称或对象" clearable style="width: 200px" />
-        <el-select v-model="query.module" placeholder="业务模块" clearable style="width: 160px">
-          <el-option v-for="item in LOG_MODULE" :key="item.value" :label="item.label" :value="item.value" />
+        <el-input
+          v-model="query.keyword"
+          :placeholder="t('operLog.keywordPlaceholder')"
+          clearable
+          style="width: 200px"
+        />
+        <el-select
+          v-model="query.module"
+          :placeholder="t('operLog.module')"
+          clearable
+          style="width: 160px"
+        >
+          <el-option
+            v-for="item in LOG_MODULE"
+            :key="item.value"
+            :label="t(item.labelKey)"
+            :value="item.value"
+          />
         </el-select>
-        <el-select v-model="query.action" placeholder="操作类型" clearable style="width: 150px">
-          <el-option v-for="item in OPER_ACTION" :key="item.value" :label="item.label" :value="item.value" />
+        <el-select
+          v-model="query.action"
+          :placeholder="t('operLog.action')"
+          clearable
+          style="width: 150px"
+        >
+          <el-option
+            v-for="item in OPER_ACTION"
+            :key="item.value"
+            :label="t(item.labelKey)"
+            :value="item.value"
+          />
         </el-select>
-        <el-select v-model="query.result" placeholder="结果" clearable style="width: 130px">
-          <el-option v-for="item in OPER_RESULT" :key="item.value" :label="item.label" :value="item.value" />
+        <el-select
+          v-model="query.result"
+          :placeholder="t('operLog.result')"
+          clearable
+          style="width: 130px"
+        >
+          <el-option
+            v-for="item in OPER_RESULT"
+            :key="item.value"
+            :label="t(item.labelKey)"
+            :value="item.value"
+          />
         </el-select>
         <el-date-picker
           v-model="range"
           type="datetimerange"
-          range-separator="至"
-          start-placeholder="开始时间"
-          end-placeholder="结束时间"
+          :range-separator="t('common.to')"
+          :start-placeholder="t('common.startTime')"
+          :end-placeholder="t('common.endTime')"
         />
-        <el-button type="primary" @click="load(1)">查询</el-button>
-        <el-button @click="reset">重置</el-button>
+        <el-button type="primary" @click="load(1)">{{ t('common.search') }}</el-button>
+        <el-button @click="reset">{{ t('common.reset') }}</el-button>
         <span class="grow" />
-        <el-button v-perm="'logs:export'" @click="onExport">导出</el-button>
+        <el-button v-perm="'logs:export'" @click="onExport">{{ t('common.export') }}</el-button>
       </div>
 
       <el-table :data="page.list" v-loading="loading" border>
-        <el-table-column prop="moduleLabel" label="业务模块" width="130" />
-        <el-table-column prop="actionLabel" label="操作类型" width="110" />
-        <el-table-column label="业务对象" min-width="160">
-          <template #default="{ row }">{{ row.objectName || row.objectId || '—' }}</template>
-        </el-table-column>
-        <el-table-column label="结果" width="110">
+        <el-table-column prop="moduleLabel" :label="t('operLog.module')" width="130" />
+        <el-table-column prop="actionLabel" :label="t('operLog.action')" width="110" />
+        <el-table-column :label="t('operLog.object')" min-width="160">
           <template #default="{ row }">
-            <el-tag :type="row.result === 'SUCCESS' ? 'success' : row.result === 'PARTIAL' ? 'warning' : 'danger'">
+            {{ row.objectName || row.objectId || t('common.dash') }}
+          </template>
+        </el-table-column>
+        <el-table-column :label="t('operLog.result')" width="110">
+          <template #default="{ row }">
+            <el-tag
+              :type="
+                row.result === 'SUCCESS' ? 'success' : row.result === 'PARTIAL' ? 'warning' : 'danger'
+              "
+            >
               {{ row.resultLabel }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作人" min-width="150">
-          <template #default="{ row }">{{ row.nickname }}（{{ row.account }}）</template>
+        <el-table-column :label="t('operLog.operator')" min-width="150">
+          <template #default="{ row }">
+            {{ t('common.parenthesized', { main: row.nickname, sub: row.account }) }}
+          </template>
         </el-table-column>
-        <el-table-column prop="clientIp" label="来源 IP" width="140" />
-        <el-table-column label="操作时间" width="180">
+        <el-table-column prop="clientIp" :label="t('operLog.clientIp')" width="140" />
+        <el-table-column :label="t('operLog.operTime')" width="180">
           <template #default="{ row }">{{ formatDateTime(row.operTime) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="90" fixed="right">
+        <el-table-column :label="t('common.action')" width="90" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openDetail(row)">详情</el-button>
+            <el-button link type="primary" @click="openDetail(row)">
+              {{ t('common.detail') }}
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -62,27 +107,37 @@
       />
     </el-card>
 
-    <el-drawer v-model="detailVisible" title="操作日志详情" size="520px">
+    <el-drawer v-model="detailVisible" :title="t('operLog.detailTitle')" size="520px">
       <el-descriptions v-if="current" :column="1" border>
-        <el-descriptions-item label="业务模块">{{ current.moduleLabel }}</el-descriptions-item>
-        <el-descriptions-item label="操作类型">{{ current.actionLabel }}</el-descriptions-item>
-        <el-descriptions-item label="业务对象">
-          {{ current.objectName || current.objectId || '—' }}
+        <el-descriptions-item :label="t('operLog.module')">
+          {{ current.moduleLabel }}
         </el-descriptions-item>
-        <el-descriptions-item label="结果">{{ current.resultLabel }}</el-descriptions-item>
-        <el-descriptions-item v-if="current.failReason" label="失败原因">
+        <el-descriptions-item :label="t('operLog.action')">
+          {{ current.actionLabel }}
+        </el-descriptions-item>
+        <el-descriptions-item :label="t('operLog.object')">
+          {{ current.objectName || current.objectId || t('common.dash') }}
+        </el-descriptions-item>
+        <el-descriptions-item :label="t('operLog.result')">
+          {{ current.resultLabel }}
+        </el-descriptions-item>
+        <el-descriptions-item v-if="current.failReason" :label="t('operLog.failReason')">
           {{ current.failReason }}
         </el-descriptions-item>
-        <el-descriptions-item v-if="current.totalCount" label="批量台数">
+        <el-descriptions-item v-if="current.totalCount" :label="t('operLog.batchCount')">
           {{ current.successCount }} / {{ current.totalCount }}
         </el-descriptions-item>
-        <el-descriptions-item label="操作人">
-          {{ current.nickname }}（{{ current.account }}）
+        <el-descriptions-item :label="t('operLog.operator')">
+          {{ t('common.parenthesized', { main: current.nickname, sub: current.account }) }}
         </el-descriptions-item>
-        <el-descriptions-item label="来源 IP">{{ current.clientIp }}</el-descriptions-item>
-        <el-descriptions-item label="操作时间">{{ formatDateTime(current.operTime) }}</el-descriptions-item>
-        <el-descriptions-item label="关联编号">{{ current.traceId }}</el-descriptions-item>
-        <el-descriptions-item label="变更摘要">
+        <el-descriptions-item :label="t('operLog.clientIp')">
+          {{ current.clientIp }}
+        </el-descriptions-item>
+        <el-descriptions-item :label="t('operLog.operTime')">
+          {{ formatDateTime(current.operTime) }}
+        </el-descriptions-item>
+        <el-descriptions-item :label="t('operLog.traceId')">{{ current.traceId }}</el-descriptions-item>
+        <el-descriptions-item :label="t('operLog.changeSummary')">
           <pre class="summary">{{ prettySummary }}</pre>
         </el-descriptions-item>
       </el-descriptions>
@@ -92,11 +147,13 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { LOG_MODULE, OPER_ACTION, OPER_RESULT } from '@/stores/dict'
 import { exportOperLogs, operLogDetail, pageOperLogs, type OperLogQuery } from '@/api/log'
 import type { OperLogItem } from '@/api/types'
 import { formatDateTime, toUtcIso } from '@/utils/datetime'
 
+const { t } = useI18n()
 const loading = ref(false)
 const detailVisible = ref(false)
 const current = ref<OperLogItem | null>(null)
@@ -114,7 +171,7 @@ const query = reactive<OperLogQuery & { pageNum: number; pageSize: number }>({
 
 const prettySummary = computed(() => {
   if (!current.value?.changeSummary) {
-    return '—'
+    return t('common.dash')
   }
   try {
     return JSON.stringify(JSON.parse(current.value.changeSummary), null, 2)

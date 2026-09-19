@@ -1,21 +1,23 @@
 <template>
   <div class="wrapper">
     <el-card class="card">
-      <h3>{{ user.mustChangePassword ? '首次登录，请修改初始密码' : '修改密码' }}</h3>
-      <p class="form-tip">修改成功后当前登录会话将失效，需要使用新密码重新登录。</p>
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="96px">
-        <el-form-item label="原密码" prop="oldPassword">
+      <h3>{{ user.mustChangePassword ? t('password.firstTitle') : t('password.title') }}</h3>
+      <p class="form-tip">{{ t('password.tip') }}</p>
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="120px">
+        <el-form-item :label="t('password.oldPassword')" prop="oldPassword">
           <el-input v-model="form.oldPassword" type="password" show-password />
         </el-form-item>
-        <el-form-item label="新密码" prop="newPassword">
+        <el-form-item :label="t('password.newPassword')" prop="newPassword">
           <el-input v-model="form.newPassword" type="password" show-password />
         </el-form-item>
-        <el-form-item label="确认新密码" prop="confirmPassword">
+        <el-form-item :label="t('password.confirmPassword')" prop="confirmPassword">
           <el-input v-model="form.confirmPassword" type="password" show-password />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :loading="loading" @click="submit">保存</el-button>
-          <el-button @click="backOrLogout">{{ user.mustChangePassword ? '退出登录' : '返回' }}</el-button>
+          <el-button type="primary" :loading="loading" @click="submit">{{ t('common.save') }}</el-button>
+          <el-button @click="backOrLogout">
+            {{ user.mustChangePassword ? t('layout.signOut') : t('password.back') }}
+          </el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -23,32 +25,34 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { changePassword } from '@/api/auth'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
 const user = useUserStore()
+const { t } = useI18n()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
 
 const form = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
-const rules: FormRules = {
-  oldPassword: [{ required: true, message: '请输入原密码', trigger: 'blur' }],
+const rules = computed<FormRules>(() => ({
+  oldPassword: [{ required: true, message: t('password.oldRequired'), trigger: 'blur' }],
   newPassword: [
-    { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 8, max: 64, message: '新密码长度为 8 至 64 位', trigger: 'blur' }
+    { required: true, message: t('password.newRequired'), trigger: 'blur' },
+    { min: 8, max: 64, message: t('password.lengthRule'), trigger: 'blur' }
   ],
   confirmPassword: [
     {
       validator: (_rule, value, callback) =>
-        value === form.newPassword ? callback() : callback(new Error('两次输入的新密码不一致')),
+        value === form.newPassword ? callback() : callback(new Error(t('password.mismatch'))),
       trigger: 'blur'
     }
   ]
-}
+}))
 
 async function submit() {
   const valid = await formRef.value?.validate().catch(() => false)
@@ -59,7 +63,7 @@ async function submit() {
   try {
     await changePassword({ oldPassword: form.oldPassword, newPassword: form.newPassword })
     user.clear()
-    ElMessage.success('密码已修改，请重新登录')
+    ElMessage.success(t('password.changed'))
     await router.push({ name: 'login' })
   } finally {
     loading.value = false
@@ -85,6 +89,6 @@ async function backOrLogout() {
 }
 
 .card {
-  width: 480px;
+  width: 520px;
 }
 </style>

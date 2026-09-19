@@ -6,6 +6,6 @@ import lombok.Data;
 @Data
 public class ForgotPasswordRequest {
 
-    @NotBlank(message = "请输入登录账号")
+    @NotBlank(message = "msg.valid.accountRequired")
     private String account;
 }

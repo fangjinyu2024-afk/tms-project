@@ -2,47 +2,88 @@
   <div class="page">
     <el-card>
       <div class="page-toolbar">
-        <el-input v-model="query.keyword" placeholder="角色名称" clearable style="width: 200px" />
-        <el-select v-model="query.status" placeholder="状态" clearable style="width: 140px">
-          <el-option v-for="item in ENABLE_STATUS" :key="item.value" :label="item.label" :value="item.value" />
+        <el-input
+          v-model="query.keyword"
+          :placeholder="t('role.namePlaceholder')"
+          clearable
+          style="width: 200px"
+        />
+        <el-select
+          v-model="query.status"
+          :placeholder="t('common.status')"
+          clearable
+          style="width: 140px"
+        >
+          <el-option
+            v-for="item in ENABLE_STATUS"
+            :key="item.value"
+            :label="t(item.labelKey)"
+            :value="item.value"
+          />
         </el-select>
-        <el-button type="primary" @click="load(1)">查询</el-button>
-        <el-button @click="reset">重置</el-button>
+        <el-button type="primary" @click="load(1)">{{ t('common.search') }}</el-button>
+        <el-button @click="reset">{{ t('common.reset') }}</el-button>
         <span class="grow" />
-        <el-button v-perm="'roles:create'" type="primary" @click="openCreate">新增角色</el-button>
-        <el-button v-perm="'roles:export'" @click="onExport">导出</el-button>
+        <el-button v-perm="'roles:create'" type="primary" @click="openCreate">
+          {{ t('role.createTitle') }}
+        </el-button>
+        <el-button v-perm="'roles:export'" @click="onExport">{{ t('common.export') }}</el-button>
       </div>
 
       <el-table :data="page.list" v-loading="loading" border>
-        <el-table-column label="角色名称" min-width="180">
+        <el-table-column :label="t('role.name')" min-width="180">
           <template #default="{ row }">
             {{ row.name }}
-            <el-tag v-if="row.builtin" size="small" type="warning" class="tag">内置</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="ownerOrgName" label="归属机构" min-width="140" />
-        <el-table-column prop="dataScopeLabel" label="可管理范围" min-width="180" />
-        <el-table-column prop="memberCount" label="成员数" width="90" />
-        <el-table-column label="状态" width="90">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 'ENABLED' ? 'success' : 'info'">
-              {{ row.status === 'ENABLED' ? '启用' : '停用' }}
+            <el-tag v-if="row.builtin" size="small" type="warning" class="tag">
+              {{ t('role.builtin') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="description" label="说明" min-width="160" />
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column prop="ownerOrgName" :label="t('role.ownerOrg')" min-width="140" />
+        <el-table-column prop="dataScopeLabel" :label="t('role.dataScope')" min-width="180" />
+        <el-table-column prop="memberCount" :label="t('role.memberCount')" width="90" />
+        <el-table-column :label="t('common.status')" width="90">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openView(row)">查看权限</el-button>
-            <el-button v-perm="'roles:edit'" link type="primary" :disabled="row.builtin" @click="openEdit(row)">
-              编辑
+            <el-tag :type="row.status === 'ENABLED' ? 'success' : 'info'">
+              {{ t(`enums.enableStatus.${row.status}`) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="description" :label="t('role.description')" min-width="160" />
+        <el-table-column :label="t('common.action')" width="280" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="openView(row)">
+              {{ t('role.viewPermissions') }}
             </el-button>
-            <el-button v-perm="'roles:copy'" link type="primary" @click="onCopy(row)">复制</el-button>
-            <el-button v-perm="'roles:toggle'" link type="primary" :disabled="row.builtin" @click="onToggle(row)">
-              {{ row.status === 'ENABLED' ? '停用' : '启用' }}
+            <el-button
+              v-perm="'roles:edit'"
+              link
+              type="primary"
+              :disabled="row.builtin"
+              @click="openEdit(row)"
+            >
+              {{ t('common.edit') }}
             </el-button>
-            <el-button v-perm="'roles:delete'" link type="danger" :disabled="row.builtin" @click="onDelete(row)">
-              删除
+            <el-button v-perm="'roles:copy'" link type="primary" @click="onCopy(row)">
+              {{ t('common.copy') }}
+            </el-button>
+            <el-button
+              v-perm="'roles:toggle'"
+              link
+              type="primary"
+              :disabled="row.builtin"
+              @click="onToggle(row)"
+            >
+              {{ row.status === 'ENABLED' ? t('common.disable') : t('common.enable') }}
+            </el-button>
+            <el-button
+              v-perm="'roles:delete'"
+              link
+              type="danger"
+              :disabled="row.builtin"
+              @click="onDelete(row)"
+            >
+              {{ t('common.delete') }}
             </el-button>
           </template>
         </el-table-column>
@@ -62,32 +103,35 @@
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="角色名称" prop="name">
+            <el-form-item :label="t('role.name')" prop="name">
               <el-input v-model="form.name" :disabled="readonly" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="可管理范围" prop="dataScope">
+            <el-form-item :label="t('role.dataScope')" prop="dataScope">
               <el-select v-model="form.dataScope" :disabled="readonly" style="width: 100%">
-                <el-option v-for="item in DATA_SCOPE" :key="item.value" :label="item.label" :value="item.value" />
+                <el-option
+                  v-for="item in DATA_SCOPE"
+                  :key="item.value"
+                  :label="t(item.labelKey)"
+                  :value="item.value"
+                />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col v-if="!editing" :span="12">
-            <el-form-item label="归属机构" prop="ownerOrgId">
+            <el-form-item :label="t('role.ownerOrg')" prop="ownerOrgId">
               <OrgTreeSelect v-model="form.ownerOrgId" only-enabled />
             </el-form-item>
           </el-col>
           <el-col :span="24">
-            <el-form-item label="说明">
+            <el-form-item :label="t('role.description')">
               <el-input v-model="form.description" :disabled="readonly" />
             </el-form-item>
           </el-col>
         </el-row>
       </el-form>
-      <p class="form-tip">
-        按菜单分组平铺展示，行内为该菜单可配置的操作；无权授予的操作置灰，勾选操作时自动补齐查看权限。
-      </p>
+      <p class="form-tip">{{ t('role.matrixTip') }}</p>
       <PermissionMatrix
         :catalog="catalog"
         :selected="form.permCodes"
@@ -95,8 +139,12 @@
         @update:selected="(value) => (form.permCodes = value)"
       />
       <template #footer>
-        <el-button @click="dialogVisible = false">{{ readonly ? '关闭' : '取消' }}</el-button>
-        <el-button v-if="!readonly" type="primary" :loading="saving" @click="submit">保存</el-button>
+        <el-button @click="dialogVisible = false">
+          {{ readonly ? t('common.close') : t('common.cancel') }}
+        </el-button>
+        <el-button v-if="!readonly" type="primary" :loading="saving" @click="submit">
+          {{ t('common.save') }}
+        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -104,6 +152,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import OrgTreeSelect from '@/components/OrgTreeSelect.vue'
 import PermissionMatrix from '@/components/PermissionMatrix.vue'
@@ -123,6 +172,7 @@ import {
 import type { DataScope, Id, PermissionCatalogItem, RoleItem } from '@/api/types'
 import { useUserStore } from '@/stores/user'
 
+const { t } = useI18n()
 const user = useUserStore()
 const loading = ref(false)
 const saving = ref(false)
@@ -149,13 +199,19 @@ const form = reactive({
   version: 0
 })
 
-const rules: FormRules = {
-  name: [{ required: true, message: '请输入角色名称', trigger: 'blur' }],
-  dataScope: [{ required: true, message: '请选择可管理范围', trigger: 'change' }],
-  ownerOrgId: [{ required: true, message: '请选择归属机构', trigger: 'change' }]
-}
+const rules = computed<FormRules>(() => ({
+  name: [{ required: true, message: t('role.nameRequired'), trigger: 'blur' }],
+  dataScope: [{ required: true, message: t('role.dataScopeRequired'), trigger: 'change' }],
+  ownerOrgId: [{ required: true, message: t('role.ownerOrgRequired'), trigger: 'change' }]
+}))
 
-const dialogTitle = computed(() => (readonly.value ? '角色权限' : editing.value ? '编辑角色' : '新增角色'))
+const dialogTitle = computed(() =>
+  readonly.value
+    ? t('role.permissionTitle')
+    : editing.value
+      ? t('role.editTitle')
+      : t('role.createTitle')
+)
 
 watch(
   () => form.ownerOrgId,
@@ -251,7 +307,7 @@ async function submit() {
         permCodes: form.permCodes
       })
     }
-    ElMessage.success('角色已保存')
+    ElMessage.success(t('common.saved'))
     dialogVisible.value = false
     await load()
   } finally {
@@ -260,22 +316,24 @@ async function submit() {
 }
 
 async function onCopy(row: RoleItem) {
-  await ElMessageBox.confirm('复制后只带入当前可授予的权限项，是否继续？', '复制角色')
+  await ElMessageBox.confirm(t('role.copyConfirm'), t('role.copyTitle'))
   await copyRole(row.id)
-  ElMessage.success('角色已复制')
+  ElMessage.success(t('role.copied'))
   await load()
 }
 
 async function onToggle(row: RoleItem) {
   await toggleRole(row.id, row.status === 'ENABLED' ? 'DISABLED' : 'ENABLED')
-  ElMessage.success('状态已更新')
+  ElMessage.success(t('common.statusUpdated'))
   await load()
 }
 
 async function onDelete(row: RoleItem) {
-  await ElMessageBox.confirm(`确认删除角色「${row.name}」？`, '删除角色', { type: 'warning' })
+  await ElMessageBox.confirm(t('role.deleteConfirm', { name: row.name }), t('role.deleteTitle'), {
+    type: 'warning'
+  })
   await deleteRole(row.id)
-  ElMessage.success('角色已删除')
+  ElMessage.success(t('common.deleted'))
   await load()
 }
 

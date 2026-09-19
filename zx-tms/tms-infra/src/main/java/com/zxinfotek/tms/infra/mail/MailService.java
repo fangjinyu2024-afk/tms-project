@@ -31,7 +31,7 @@ public class MailService {
     public void send(String to, String subject, String content) {
         JavaMailSender sender = mailSenderProvider.getIfAvailable();
         if (sender == null) {
-            throw new BizException(CommonErrorCode.COMMON_004, "邮件服务未配置");
+            throw new BizException(CommonErrorCode.COMMON_004, "msg.infra.mailNotConfigured");
         }
         SimpleMailMessage message = new SimpleMailMessage();
         if (from != null && !from.isBlank()) {
@@ -44,7 +44,7 @@ public class MailService {
             sender.send(message);
         } catch (RuntimeException e) {
             log.error("邮件发送失败，收件人={}", to, e);
-            throw new BizException(CommonErrorCode.COMMON_004, "邮件发送失败");
+            throw new BizException(CommonErrorCode.COMMON_004, "msg.infra.mailSendFailed");
         }
     }
 }

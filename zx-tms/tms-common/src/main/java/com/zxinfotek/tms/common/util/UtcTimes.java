@@ -17,6 +17,8 @@ public final class UtcTimes {
     public static final DateTimeFormatter ISO_UTC =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 
+    public static final DateTimeFormatter COMPACT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
     private UtcTimes() {
     }
 
@@ -38,5 +40,10 @@ public final class UtcTimes {
 
     public static String format(LocalDateTime time) {
         return time == null ? null : ISO_UTC.format(time);
+    }
+
+    /** 导出文件中的可读时间，口径为 UTC */
+    public static String formatCompact(LocalDateTime time) {
+        return time == null ? "" : COMPACT.format(time);
     }
 }

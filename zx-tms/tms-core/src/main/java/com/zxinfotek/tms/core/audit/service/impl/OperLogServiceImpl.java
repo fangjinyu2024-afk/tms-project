@@ -1,6 +1,5 @@
 package com.zxinfotek.tms.core.audit.service.impl;
 
-import com.alibaba.excel.annotation.ExcelProperty;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -17,14 +16,13 @@ import com.zxinfotek.tms.infra.context.DataScopeAssert;
 import com.zxinfotek.tms.infra.context.RequestContext;
 import com.zxinfotek.tms.infra.context.RequestContextHolder;
 import com.zxinfotek.tms.infra.excel.ExcelExportService;
-import lombok.Data;
+import com.zxinfotek.tms.infra.i18n.I18nMessages;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.Collectors;
@@ -106,7 +104,7 @@ public class OperLogServiceImpl implements OperLogService {
     public OperLogVO detail(Long id) {
         OperLogEntity entity = operLogMapper.selectById(id);
         if (entity == null) {
-            throw new NotFoundException("操作日志不存在");
+            throw new NotFoundException("msg.log.notFound");
         }
         DataScopeAssert.within(entity.getTenantId(), entity.getOrgPath());
         return toVO(entity);
@@ -116,21 +114,22 @@ public class OperLogServiceImpl implements OperLogService {
     public String export(OperLogQuery query) {
         List<OperLogEntity> logs = operLogMapper
                 .selectOperLogPage(new Page<>(1, 10000), buildWrapper(query)).getRecords();
-        List<OperLogExportRow> rows = logs.stream().map(entity -> {
-            OperLogExportRow row = new OperLogExportRow();
-            row.setModule(entity.getModule() == null ? "" : entity.getModule().getLabel());
-            row.setAction(entity.getAction() == null ? "" : entity.getAction().getLabel());
-            row.setObjectName(entity.getObjectName());
-            row.setResult(entity.getResult() == null ? "" : entity.getResult().getLabel());
-            row.setFailReason(entity.getFailReason());
-            row.setAccount(entity.getAccount());
-            row.setNickname(entity.getNickname());
-            row.setClientIp(entity.getClientIp());
-            row.setOperTime(entity.getOperTime());
-            return row;
-        }).collect(Collectors.toList());
+        List<List<Object>> rows = logs.stream().map(entity -> List.<Object>of(
+                text(I18nMessages.label(entity.getModule())),
+                text(I18nMessages.label(entity.getAction())),
+                text(entity.getObjectName()),
+                text(I18nMessages.label(entity.getResult())),
+                text(entity.getFailReason()),
+                text(entity.getAccount()),
+                text(entity.getNickname()),
+                text(entity.getClientIp()),
+                UtcTimes.formatCompact(entity.getOperTime()))).collect(Collectors.toList());
         return excelExportService.export("oper-log", RequestContextHolder.get().getTenantId(),
-                "操作日志", OperLogExportRow.class, rows);
+                "export.sheet.operLog",
+                List.of("export.column.logModule", "export.column.operAction", "export.column.objectName",
+                        "export.column.result", "export.column.failReason", "export.column.account",
+                        "export.column.nickname", "export.column.clientIp", "export.column.operTime"),
+                rows);
     }
 
     private LambdaQueryWrapper<OperLogEntity> buildWrapper(OperLogQuery query) {
@@ -166,18 +165,22 @@ public class OperLogServiceImpl implements OperLogService {
         return wrapper;
     }
 
+    private static String text(String value) {
+        return value == null ? "" : value;
+    }
+
     private OperLogVO toVO(OperLogEntity entity) {
         OperLogVO vo = new OperLogVO();
         vo.setId(entity.getId());
         vo.setModule(entity.getModule() == null ? null : entity.getModule().name());
-        vo.setModuleLabel(entity.getModule() == null ? null : entity.getModule().getLabel());
+        vo.setModuleLabel(I18nMessages.label(entity.getModule()));
         vo.setAction(entity.getAction() == null ? null : entity.getAction().name());
-        vo.setActionLabel(entity.getAction() == null ? null : entity.getAction().getLabel());
+        vo.setActionLabel(I18nMessages.label(entity.getAction()));
         vo.setObjectType(entity.getObjectType());
         vo.setObjectId(entity.getObjectId());
         vo.setObjectName(entity.getObjectName());
         vo.setResult(entity.getResult() == null ? null : entity.getResult().name());
-        vo.setResultLabel(entity.getResult() == null ? null : entity.getResult().getLabel());
+        vo.setResultLabel(I18nMessages.label(entity.getResult()));
         vo.setFailReason(entity.getFailReason());
         vo.setTotalCount(entity.getTotalCount());
         vo.setSuccessCount(entity.getSuccessCount());
@@ -192,25 +195,4 @@ public class OperLogServiceImpl implements OperLogService {
         return vo;
     }
 
-    @Data
-    public static class OperLogExportRow {
-        @ExcelProperty("业务模块")
-        private String module;
-        @ExcelProperty("操作类型")
-        private String action;
-        @ExcelProperty("业务对象")
-        private String objectName;
-        @ExcelProperty("结果")
-        private String result;
-        @ExcelProperty("失败原因")
-        private String failReason;
-        @ExcelProperty("账号")
-        private String account;
-        @ExcelProperty("昵称")
-        private String nickname;
-        @ExcelProperty("来源 IP")
-        private String clientIp;
-        @ExcelProperty("操作时间")
-        private LocalDateTime operTime;
-    }
 }

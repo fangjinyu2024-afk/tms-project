@@ -12,20 +12,20 @@ import java.util.List;
 @Data
 public class ProductSaveRequest {
 
-    @NotNull(message = "请选择产品类别")
+    @NotNull(message = "msg.valid.productCategoryRequired")
     private ProductCategory category;
 
-    @NotBlank(message = "请输入产品名称")
-    @Size(max = 100, message = "产品名称最多 100 个字符")
+    @NotBlank(message = "msg.valid.productNameRequired")
+    @Size(max = 100, message = "msg.valid.productNameSize")
     private String name;
 
-    @Size(max = 255)
+    @Size(max = 255, message = "msg.valid.imagePathSize")
     private String imagePath;
 
-    @Size(max = 500)
+    @Size(max = 500, message = "msg.valid.productDescriptionSize")
     private String description;
 
-    @NotEmpty(message = "请至少添加一个型号")
+    @NotEmpty(message = "msg.valid.modelsRequired")
     private List<ModelItem> models;
 
     @Data
@@ -33,8 +33,8 @@ public class ProductSaveRequest {
         /** 已有型号的主键，新增型号留空 */
         private Long id;
 
-        @NotBlank(message = "请输入型号标识")
-        @Size(max = 50)
+        @NotBlank(message = "msg.valid.modelRequired")
+        @Size(max = 50, message = "msg.valid.modelSize")
         private String model;
     }
 }

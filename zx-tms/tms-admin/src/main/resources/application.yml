@@ -63,6 +63,9 @@ springdoc:
     path: /swagger-ui.html
 
 tms:
+  # 国际化：语言取 lang 参数或 Accept-Language，支持 zh-CN 与 en，默认 zh-CN
+  i18n:
+    basenames: classpath:i18n/common,classpath:i18n/infra,classpath:i18n/core,classpath:i18n/admin
   id:
     worker-id: 1
     datacenter-id: 1

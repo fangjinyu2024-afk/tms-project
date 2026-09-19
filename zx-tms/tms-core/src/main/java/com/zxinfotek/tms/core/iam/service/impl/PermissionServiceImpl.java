@@ -25,6 +25,7 @@ import com.zxinfotek.tms.core.iam.mapper.TenantFeatureMapper;
 import com.zxinfotek.tms.core.iam.mapper.TenantMapper;
 import com.zxinfotek.tms.infra.context.RequestContext;
 import com.zxinfotek.tms.infra.context.RequestContextHolder;
+import com.zxinfotek.tms.infra.i18n.I18nMessages;
 import com.zxinfotek.tms.infra.mybatis.SnowflakeIdentifierGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -119,7 +120,7 @@ public class PermissionServiceImpl implements PermissionService {
     public EffectivePermissions load(Long memberId) {
         MemberEntity member = memberMapper.selectById(memberId);
         if (member == null) {
-            throw new NotFoundException("成员不存在");
+            throw new NotFoundException("msg.member.notFound");
         }
         TenantEntity tenant = tenantMapper.selectById(member.getTenantId());
         Integer featureVersion = tenant == null ? 0 : tenant.getFeatureVersion();
@@ -208,8 +209,8 @@ public class PermissionServiceImpl implements PermissionService {
                 PermissionCatalogVO.ActionVO actionVO = new PermissionCatalogVO.ActionVO();
                 actionVO.setPermCode(permCode);
                 actionVO.setAction(action.action());
-                actionVO.setActionName(PermissionCatalog.ACTION_NAMES
-                        .getOrDefault(action.action(), action.action()));
+                actionVO.setActionName(I18nMessages.getOrDefault("permission.action." + action.action(),
+                        PermissionCatalog.ACTION_NAMES.getOrDefault(action.action(), action.action())));
                 actionVO.setGrantable(operatorPermissions.contains(permCode));
                 actions.add(actionVO);
             }
@@ -218,8 +219,9 @@ public class PermissionServiceImpl implements PermissionService {
             }
             PermissionCatalogVO menuVO = new PermissionCatalogVO();
             menuVO.setMenuKey(menu.menuKey());
-            menuVO.setMenuName(menu.menuName());
-            menuVO.setGroupName(menu.groupName());
+            menuVO.setMenuName(I18nMessages.getOrDefault("permission.menu." + menu.menuKey(), menu.menuName()));
+            menuVO.setGroupName(I18nMessages.getOrDefault("permission.group." + menu.group().groupKey(),
+                    menu.group().name()));
             menuVO.setActions(actions);
             catalog.add(menuVO);
         }
@@ -264,7 +266,7 @@ public class PermissionServiceImpl implements PermissionService {
         }
         OrgEntity org = orgMapper.selectById(orgId);
         if (org == null) {
-            throw new NotFoundException("机构不存在");
+            throw new NotFoundException("msg.org.notFound");
         }
         return org.getTenantId();
     }

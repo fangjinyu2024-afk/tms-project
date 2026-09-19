@@ -7,7 +7,7 @@ public class AuthException extends BaseException {
         super(errorCode);
     }
 
-    public AuthException(ErrorCode errorCode, String message) {
-        super(errorCode, message);
+    public AuthException(ErrorCode errorCode, String messageKey, Object... messageArgs) {
+        super(errorCode, messageKey, messageArgs);
     }
 }

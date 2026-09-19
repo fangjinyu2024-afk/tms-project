@@ -37,6 +37,7 @@ import com.zxinfotek.tms.core.iam.mapper.OrgMapper;
 import com.zxinfotek.tms.core.iam.mapper.TenantMapper;
 import com.zxinfotek.tms.infra.context.RequestContext;
 import com.zxinfotek.tms.infra.context.RequestContextHolder;
+import com.zxinfotek.tms.infra.i18n.I18nMessages;
 import com.zxinfotek.tms.infra.mail.MailService;
 import com.zxinfotek.tms.infra.redis.RedisService;
 import org.slf4j.Logger;
@@ -113,17 +114,17 @@ public class AuthServiceImpl implements AuthService {
         MemberEntity member = memberMapper.selectOne(Wrappers.<MemberEntity>lambdaQuery()
                 .eq(MemberEntity::getAccountLower, accountLower).last("LIMIT 1"));
         if (member == null) {
-            writeLoginLog(null, request, LoginResult.FAIL, "账号或密码错误");
+            writeLoginLog(null, request, LoginResult.FAIL, "msg.login.badCredentials");
             throw new BizException(IamErrorCode.AUTH_001);
         }
         LocalDateTime now = UtcTimes.now();
         if (member.getLockedUntil() != null && member.getLockedUntil().isAfter(now)) {
             long minutes = Math.max(1, Duration.between(now, member.getLockedUntil()).toMinutes());
-            writeLoginLog(member, request, LoginResult.FAIL, "账号已锁定");
-            throw new BizException(IamErrorCode.AUTH_003, "账号已锁定，请 " + minutes + " 分钟后重试");
+            writeLoginLog(member, request, LoginResult.FAIL, "msg.login.locked");
+            throw new BizException(IamErrorCode.AUTH_003, "msg.login.lockedRetry", minutes);
         }
         if (!organizationEnabled(member)) {
-            writeLoginLog(member, request, LoginResult.FAIL, "账号已停用");
+            writeLoginLog(member, request, LoginResult.FAIL, "msg.login.disabled");
             loginSessionService.invalidateByMember(member.getId(), SessionInvalidReason.ACCOUNT_DISABLED);
             throw new BizException(IamErrorCode.AUTH_002);
         }
@@ -135,7 +136,7 @@ public class AuthServiceImpl implements AuthService {
                 member.setFailCount(0);
             }
             memberMapper.updateById(member);
-            writeLoginLog(member, request, LoginResult.FAIL, "账号或密码错误");
+            writeLoginLog(member, request, LoginResult.FAIL, "msg.login.badCredentials");
             throw new BizException(IamErrorCode.AUTH_001);
         }
 
@@ -229,10 +230,9 @@ public class AuthServiceImpl implements AuthService {
         }
         String token = IdUtils.randomHex(16);
         redisService.set(RESET_TOKEN_PREFIX + token, member.getId(), securityProperties.getResetTokenExpire());
-        mailService.send(member.getEmail(), "TMS 密码找回",
-                "请在 " + securityProperties.getResetTokenExpire().toMinutes() + " 分钟内打开以下链接重置密码："
-                        + System.lineSeparator()
-                        + securityProperties.getConsoleBaseUrl() + "/reset-password?token=" + token);
+        mailService.send(member.getEmail(), I18nMessages.get("mail.password.subject"),
+                I18nMessages.get("mail.password.body", securityProperties.getResetTokenExpire().toMinutes(),
+                        securityProperties.getConsoleBaseUrl() + "/reset-password?token=" + token));
     }
 
     @Override
@@ -240,11 +240,11 @@ public class AuthServiceImpl implements AuthService {
     public void resetPasswordByToken(ResetPasswordRequest request) {
         Object memberId = redisService.get(RESET_TOKEN_PREFIX + request.getToken(), Object.class);
         if (memberId == null) {
-            throw new AuthException(IamErrorCode.AUTH_004, "重置链接无效或已过期");
+            throw new AuthException(IamErrorCode.AUTH_004, "msg.password.resetTokenInvalid");
         }
         MemberEntity member = memberMapper.selectById(Long.valueOf(String.valueOf(memberId)));
         if (member == null) {
-            throw new NotFoundException("成员不存在");
+            throw new NotFoundException("msg.member.notFound");
         }
         redisService.delete(RESET_TOKEN_PREFIX + request.getToken());
         applyNewPassword(member, request.getNewPassword(), SessionInvalidReason.PASSWORD_CHANGED);
@@ -256,11 +256,11 @@ public class AuthServiceImpl implements AuthService {
         if ("confirm".equalsIgnoreCase(request.getAction())) {
             Object memberId = redisService.get(EMAIL_TOKEN_PREFIX + request.getToken(), Object.class);
             if (memberId == null) {
-                throw new BizException(IamErrorCode.AUTH_007, "验证链接无效或已过期");
+                throw new BizException(IamErrorCode.AUTH_007, "msg.email.tokenInvalid");
             }
             MemberEntity member = memberMapper.selectById(Long.valueOf(String.valueOf(memberId)));
             if (member == null) {
-                throw new NotFoundException("成员不存在");
+                throw new NotFoundException("msg.member.notFound");
             }
             member.setEmailVerified(1);
             memberMapper.updateById(member);
@@ -269,13 +269,13 @@ public class AuthServiceImpl implements AuthService {
         }
         MemberEntity member = currentMember();
         if (member.getEmail() == null || member.getEmail().isBlank()) {
-            throw new BizException(IamErrorCode.AUTH_007, "请先填写邮箱");
+            throw new BizException(IamErrorCode.AUTH_007, "msg.email.required");
         }
         String token = IdUtils.randomHex(16);
         redisService.set(EMAIL_TOKEN_PREFIX + token, member.getId(), securityProperties.getEmailTokenExpire());
-        mailService.send(member.getEmail(), "TMS 邮箱验证",
-                "请打开以下链接完成邮箱验证：" + System.lineSeparator()
-                        + securityProperties.getConsoleBaseUrl() + "/verify-email?token=" + token);
+        mailService.send(member.getEmail(), I18nMessages.get("mail.email.subject"),
+                I18nMessages.get("mail.email.body",
+                        securityProperties.getConsoleBaseUrl() + "/verify-email?token=" + token));
     }
 
     private void applyNewPassword(MemberEntity member, String newPassword, SessionInvalidReason reason) {

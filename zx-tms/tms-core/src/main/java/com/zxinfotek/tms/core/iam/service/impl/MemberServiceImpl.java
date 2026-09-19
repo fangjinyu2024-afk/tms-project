@@ -1,6 +1,5 @@
 package com.zxinfotek.tms.core.iam.service.impl;
 
-import com.alibaba.excel.annotation.ExcelProperty;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -9,6 +8,8 @@ import com.zxinfotek.tms.common.enums.SessionInvalidReason;
 import com.zxinfotek.tms.common.exception.BizException;
 import com.zxinfotek.tms.common.exception.NotFoundException;
 import com.zxinfotek.tms.common.model.PageResult;
+import com.zxinfotek.tms.common.util.MaskUtils;
+import com.zxinfotek.tms.common.util.UtcTimes;
 import com.zxinfotek.tms.core.iam.IamErrorCode;
 import com.zxinfotek.tms.core.iam.api.LoginSessionService;
 import com.zxinfotek.tms.core.iam.api.MemberService;
@@ -32,14 +33,13 @@ import com.zxinfotek.tms.core.iam.service.support.PasswordGenerator;
 import com.zxinfotek.tms.infra.context.DataScopeAssert;
 import com.zxinfotek.tms.infra.context.RequestContextHolder;
 import com.zxinfotek.tms.infra.excel.ExcelExportService;
+import com.zxinfotek.tms.infra.i18n.I18nMessages;
 import com.zxinfotek.tms.infra.lock.DistributedLock;
-import lombok.Data;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -121,7 +121,7 @@ public class MemberServiceImpl implements MemberService {
         OrgEntity org = requireOrg(request.getOrgId());
         DataScopeAssert.within(org.getTenantId(), org.getOrgPath());
         if (org.getStatus() != EnableStatus.ENABLED) {
-            throw new BizException(IamErrorCode.ORG_002, "所属机构已停用");
+            throw new BizException(IamErrorCode.ORG_002, "msg.member.orgDisabled");
         }
         String account = normalizeAccount(request.getAccount());
         assertAccountAvailable(account);
@@ -195,7 +195,7 @@ public class MemberServiceImpl implements MemberService {
         MemberEntity member = requireMember(id);
         DataScopeAssert.within(member.getTenantId(), member.getOrgPath());
         if (id.equals(RequestContextHolder.get().getMemberId())) {
-            throw new BizException(IamErrorCode.MEMBER_005, "不能删除当前登录账号");
+            throw new BizException(IamErrorCode.MEMBER_005, "msg.member.deleteSelf");
         }
         memberMapper.deleteById(id);
         memberRoleMapper.delete(Wrappers.<MemberRoleEntity>lambdaQuery().eq(MemberRoleEntity::getMemberId, id));
@@ -211,7 +211,7 @@ public class MemberServiceImpl implements MemberService {
         String initialPassword = PasswordGenerator.generate();
         member.setPasswordHash(passwordEncoder.encode(initialPassword));
         member.setMustChangePassword(1);
-        member.setPasswordUpdatedAt(com.zxinfotek.tms.common.util.UtcTimes.now());
+        member.setPasswordUpdatedAt(UtcTimes.now());
         member.setFailCount(0);
         member.setLockedUntil(null);
         memberMapper.updateById(member);
@@ -238,19 +238,20 @@ public class MemberServiceImpl implements MemberService {
     public String export(MemberQuery query) {
         List<MemberEntity> members = memberMapper
                 .selectMemberPage(new Page<>(1, 10000), buildWrapper(query)).getRecords();
-        List<MemberExportRow> rows = members.stream().map(member -> {
-            MemberExportRow row = new MemberExportRow();
-            row.setAccount(member.getAccount());
-            row.setNickname(member.getNickname());
-            row.setOrgName(orgName(member.getOrgId()));
-            row.setEmail(com.zxinfotek.tms.common.util.MaskUtils.maskEmail(member.getEmail()));
-            row.setPhone(com.zxinfotek.tms.common.util.MaskUtils.maskPhone(member.getPhone()));
-            row.setStatus(member.getStatus() == null ? "" : member.getStatus().getLabel());
-            row.setCreateTime(member.getCreateTime());
-            return row;
-        }).collect(Collectors.toList());
+        List<List<Object>> rows = members.stream().map(member -> List.<Object>of(
+                text(member.getAccount()),
+                text(member.getNickname()),
+                text(orgName(member.getOrgId())),
+                text(MaskUtils.maskEmail(member.getEmail())),
+                text(MaskUtils.maskPhone(member.getPhone())),
+                text(I18nMessages.label(member.getStatus())),
+                UtcTimes.formatCompact(member.getCreateTime()))).collect(Collectors.toList());
         return excelExportService.export("member", RequestContextHolder.get().getTenantId(),
-                "成员", MemberExportRow.class, rows);
+                "export.sheet.member",
+                List.of("export.column.account", "export.column.nickname", "export.column.orgName",
+                        "export.column.email", "export.column.phone", "export.column.status",
+                        "export.column.createTime"),
+                rows);
     }
 
     /** 角色分配为全量覆盖，按成员维度加锁后先删后插，避免并发分配产生重复关系。 */
@@ -272,7 +273,7 @@ public class MemberServiceImpl implements MemberService {
 
     private void assertAccountAvailable(String accountLower) {
         if (!ACCOUNT_PATTERN.matcher(accountLower).matches()) {
-            throw new BizException(IamErrorCode.MEMBER_002, "账号为 3 至 64 位字母、数字、点、下划线或短横线");
+            throw new BizException(IamErrorCode.MEMBER_002, "msg.member.accountFormat");
         }
         Long exists = memberMapper.selectCount(Wrappers.<MemberEntity>lambdaQuery()
                 .eq(MemberEntity::getAccountLower, accountLower));
@@ -379,11 +380,11 @@ public class MemberServiceImpl implements MemberService {
 
     private OrgEntity requireOrg(Long orgId) {
         if (orgId == null) {
-            throw new BizException(IamErrorCode.ORG_002, "请选择所属机构");
+            throw new BizException(IamErrorCode.ORG_002, "msg.member.orgRequired");
         }
         OrgEntity org = orgMapper.selectById(orgId);
         if (org == null) {
-            throw new NotFoundException("机构不存在");
+            throw new NotFoundException("msg.org.notFound");
         }
         return org;
     }
@@ -391,14 +392,18 @@ public class MemberServiceImpl implements MemberService {
     private MemberEntity requireMember(Long id) {
         MemberEntity member = memberMapper.selectById(id);
         if (member == null) {
-            throw new NotFoundException("成员不存在");
+            throw new NotFoundException("msg.member.notFound");
         }
         return member;
     }
 
+    private static String text(String value) {
+        return value == null ? "" : value;
+    }
+
     private static String normalizeAccount(String account) {
         if (account == null || account.isBlank()) {
-            throw new BizException(IamErrorCode.MEMBER_002, "请输入登录账号");
+            throw new BizException(IamErrorCode.MEMBER_002, "msg.member.accountRequired");
         }
         return account.trim().toLowerCase();
     }
@@ -407,21 +412,4 @@ public class MemberServiceImpl implements MemberService {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
-    @Data
-    public static class MemberExportRow {
-        @ExcelProperty("登录账号")
-        private String account;
-        @ExcelProperty("昵称")
-        private String nickname;
-        @ExcelProperty("所属机构")
-        private String orgName;
-        @ExcelProperty("邮箱")
-        private String email;
-        @ExcelProperty("联系电话")
-        private String phone;
-        @ExcelProperty("状态")
-        private String status;
-        @ExcelProperty("创建时间")
-        private LocalDateTime createTime;
-    }
 }

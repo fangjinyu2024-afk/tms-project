@@ -8,12 +8,12 @@ import lombok.Data;
 @Data
 public class LoginRequest {
 
-    @NotBlank(message = "请输入登录账号")
+    @NotBlank(message = "msg.valid.accountRequired")
     private String account;
 
-    @NotBlank(message = "请输入密码")
+    @NotBlank(message = "msg.valid.passwordRequired")
     private String password;
 
-    @NotNull(message = "请指定会话入口")
+    @NotNull(message = "msg.valid.entryRequired")
     private SessionEntry entry;
 }

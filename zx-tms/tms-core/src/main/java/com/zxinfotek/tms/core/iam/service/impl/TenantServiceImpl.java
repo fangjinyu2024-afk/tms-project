@@ -1,6 +1,5 @@
 package com.zxinfotek.tms.core.iam.service.impl;
 
-import com.alibaba.excel.annotation.ExcelProperty;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -43,12 +42,11 @@ import com.zxinfotek.tms.core.product.api.ProductModelService;
 import com.zxinfotek.tms.core.product.api.model.ModelOptionVO;
 import com.zxinfotek.tms.infra.context.RequestContextHolder;
 import com.zxinfotek.tms.infra.excel.ExcelExportService;
+import com.zxinfotek.tms.infra.i18n.I18nMessages;
 import com.zxinfotek.tms.infra.mybatis.SnowflakeIdentifierGenerator;
-import lombok.Data;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -176,7 +174,8 @@ public class TenantServiceImpl implements TenantService {
             adminRequest.setOrgId(rootOrgId);
             adminRequest.setAccount(request.getAdminAccount());
             adminRequest.setNickname(request.getAdminNickname() == null || request.getAdminNickname().isBlank()
-                    ? request.getName() + "管理员" : request.getAdminNickname());
+                    ? I18nMessages.get("msg.org.defaultAdminNickname", request.getName())
+                    : request.getAdminNickname());
             adminRequest.setRoleIds(List.of(adminRoleId));
             MemberCreateResultVO admin = memberService.create(adminRequest);
             result.setAdminMemberId(admin.getMemberId());
@@ -241,16 +240,17 @@ public class TenantServiceImpl implements TenantService {
                 .eq(OrgEntity::getOrgType, OrgType.BRANCH)
                 .eq(OrgEntity::getDeleted, 0));
         if (orgCount != null && orgCount > 0) {
-            blocking.add("下级机构 " + orgCount + " 个");
+            blocking.add(I18nMessages.get("msg.block.subOrg", orgCount));
         }
         Long memberCount = memberMapper.selectCount(Wrappers.<MemberEntity>lambdaQuery()
                 .eq(MemberEntity::getTenantId, id));
         if (memberCount != null && memberCount > 0) {
-            blocking.add("成员 " + memberCount + " 人");
+            blocking.add(I18nMessages.get("msg.block.member", memberCount));
         }
         referenceProviders.forEach(provider -> blocking.addAll(provider.blockingReferences(id)));
         if (!blocking.isEmpty()) {
-            throw new BizException(IamErrorCode.TENANT_003, "存在 " + String.join("、", blocking) + "，不能删除");
+            throw new BizException(IamErrorCode.TENANT_003, "msg.tenant.deleteBlocked",
+                    String.join(I18nMessages.get("msg.common.separator"), blocking));
         }
         tenantMapper.deleteById(id);
         orgMapper.deleteById(tenant.getRootOrgId());
@@ -310,20 +310,20 @@ public class TenantServiceImpl implements TenantService {
     public String export(TenantQuery query) {
         List<TenantEntity> tenants = tenantMapper.selectPage(new Page<>(1, 10000), buildWrapper(query))
                 .getRecords();
-        List<TenantExportRow> rows = tenants.stream().map(tenant -> {
-            TenantExportRow row = new TenantExportRow();
-            row.setName(tenant.getName());
-            row.setContactName(tenant.getContactName());
-            row.setContactPhone(tenant.getContactPhone());
-            row.setRegion(String.join("/", java.util.stream.Stream
-                    .of(tenant.getCountry(), tenant.getProvince(), tenant.getCity())
-                    .filter(value -> value != null && !value.isBlank()).toList()));
-            row.setStatus(tenant.getStatus() == null ? "" : tenant.getStatus().getLabel());
-            row.setCreateTime(tenant.getCreateTime());
-            return row;
-        }).collect(Collectors.toList());
+        List<List<Object>> rows = tenants.stream().map(tenant -> List.<Object>of(
+                nullToEmpty(tenant.getName()),
+                nullToEmpty(tenant.getContactName()),
+                nullToEmpty(tenant.getContactPhone()),
+                String.join("/", java.util.stream.Stream
+                        .of(tenant.getCountry(), tenant.getProvince(), tenant.getCity())
+                        .filter(value -> value != null && !value.isBlank()).toList()),
+                nullToEmpty(I18nMessages.label(tenant.getStatus())),
+                UtcTimes.formatCompact(tenant.getCreateTime()))).collect(Collectors.toList());
         return excelExportService.export("tenant", RequestContextHolder.get().getTenantId(),
-                "客户", TenantExportRow.class, rows);
+                "export.sheet.tenant",
+                List.of("export.column.tenantName", "export.column.contactName", "export.column.contactPhone",
+                        "export.column.region", "export.column.status", "export.column.createTime"),
+                rows);
     }
 
     /**
@@ -399,7 +399,7 @@ public class TenantServiceImpl implements TenantService {
         if (menuKeys != null) {
             for (String menuKey : menuKeys) {
                 if (!selectable.contains(menuKey)) {
-                    throw new BizException(PermErrorCode.PERM_004, "菜单 " + menuKey + " 不可对客户开通");
+                    throw new BizException(PermErrorCode.PERM_004, "msg.tenant.menuNotSelectable", menuKey);
                 }
                 result.add(menuKey);
             }
@@ -415,8 +415,10 @@ public class TenantServiceImpl implements TenantService {
                 .map(menu -> {
                     TenantFeatureVO.MenuOptionVO option = new TenantFeatureVO.MenuOptionVO();
                     option.setMenuKey(menu.menuKey());
-                    option.setMenuName(menu.menuName());
-                    option.setGroupName(menu.groupName());
+                    option.setMenuName(I18nMessages.getOrDefault("permission.menu." + menu.menuKey(),
+                            menu.menuName()));
+                    option.setGroupName(I18nMessages.getOrDefault(
+                            "permission.group." + menu.group().groupKey(), menu.group().name()));
                     option.setRequired(MenuKeys.HOME.equals(menu.menuKey()));
                     return option;
                 }).collect(Collectors.toList());
@@ -480,31 +482,19 @@ public class TenantServiceImpl implements TenantService {
 
     private void assertNotPlatform(Long id) {
         if (id != null && id == IamConstants.PLATFORM_TENANT_ID) {
-            throw new BizException(IamErrorCode.TENANT_003, "平台租户不提供该操作");
+            throw new BizException(IamErrorCode.TENANT_003, "msg.tenant.platformNotAllowed");
         }
     }
 
     private TenantEntity requireTenant(Long id) {
         TenantEntity tenant = tenantMapper.selectById(id);
         if (tenant == null) {
-            throw new NotFoundException("客户不存在");
+            throw new NotFoundException("msg.tenant.notFound");
         }
         return tenant;
     }
 
-    @Data
-    public static class TenantExportRow {
-        @ExcelProperty("客户名称")
-        private String name;
-        @ExcelProperty("联系人")
-        private String contactName;
-        @ExcelProperty("联系电话")
-        private String contactPhone;
-        @ExcelProperty("国家/省/市")
-        private String region;
-        @ExcelProperty("状态")
-        private String status;
-        @ExcelProperty("创建时间")
-        private LocalDateTime createTime;
+    private static String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 }

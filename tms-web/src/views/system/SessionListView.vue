@@ -2,43 +2,63 @@
   <div class="page">
     <el-card>
       <div class="page-toolbar">
-        <el-input v-model="query.keyword" placeholder="账号、姓名或 IP" clearable style="width: 200px" />
-        <el-select v-model="query.entry" placeholder="入口" clearable style="width: 140px">
-          <el-option v-for="item in SESSION_ENTRY" :key="item.value" :label="item.label" :value="item.value" />
+        <el-input
+          v-model="query.keyword"
+          :placeholder="t('session.keywordPlaceholder')"
+          clearable
+          style="width: 200px"
+        />
+        <el-select
+          v-model="query.entry"
+          :placeholder="t('session.entry')"
+          clearable
+          style="width: 140px"
+        >
+          <el-option
+            v-for="item in SESSION_ENTRY"
+            :key="item.value"
+            :label="t(item.labelKey)"
+            :value="item.value"
+          />
         </el-select>
-        <OrgTreeSelect v-model="query.orgId" placeholder="所属机构" />
-        <el-button type="primary" @click="load(1)">查询</el-button>
-        <el-button @click="reset">重置</el-button>
+        <OrgTreeSelect v-model="query.orgId" :placeholder="t('member.orgPlaceholder')" />
+        <el-button type="primary" @click="load(1)">{{ t('common.search') }}</el-button>
+        <el-button @click="reset">{{ t('common.reset') }}</el-button>
         <span class="grow" />
-        <el-button v-perm="'sessions:view'" @click="onExport">导出</el-button>
+        <el-button v-perm="'sessions:view'" @click="onExport">{{ t('common.export') }}</el-button>
       </div>
-      <div class="table-hint">
-        每行一个有效登录会话，同一账号可有多条；强制下线一次只结束一条会话，不等于停用账号。
-      </div>
+      <div class="table-hint">{{ t('session.listTip') }}</div>
 
       <el-table :data="page.list" v-loading="loading" border>
-        <el-table-column label="账号" min-width="160">
+        <el-table-column :label="t('session.account')" min-width="160">
           <template #default="{ row }">
             {{ row.account }}
-            <el-tag v-if="row.current" size="small" type="warning" class="tag">当前会话</el-tag>
+            <el-tag v-if="row.current" size="small" type="warning" class="tag">
+              {{ t('session.current') }}
+            </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="nickname" label="姓名" width="120" />
-        <el-table-column prop="orgName" label="机构" min-width="140" />
-        <el-table-column prop="entryLabel" label="入口" width="110" />
-        <el-table-column prop="clientIp" label="IP" width="140" />
-        <el-table-column prop="userAgent" label="浏览器／客户端" min-width="180" show-overflow-tooltip />
-        <el-table-column label="登录时间" width="180">
+        <el-table-column prop="nickname" :label="t('session.nickname')" width="120" />
+        <el-table-column prop="orgName" :label="t('session.org')" min-width="140" />
+        <el-table-column prop="entryLabel" :label="t('session.entry')" width="110" />
+        <el-table-column prop="clientIp" :label="t('session.clientIp')" width="140" />
+        <el-table-column
+          prop="userAgent"
+          :label="t('session.userAgent')"
+          min-width="180"
+          show-overflow-tooltip
+        />
+        <el-table-column :label="t('session.loginTime')" width="180">
           <template #default="{ row }">{{ formatDateTime(row.loginTime) }}</template>
         </el-table-column>
-        <el-table-column label="最近活动时间" width="180">
+        <el-table-column :label="t('session.lastActiveTime')" width="180">
           <template #default="{ row }">{{ formatDateTime(row.lastActiveTime) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column :label="t('common.action')" width="120" fixed="right">
           <template #default="{ row }">
-            <span v-if="row.current" class="form-tip">—</span>
+            <span v-if="row.current" class="form-tip">{{ t('common.dash') }}</span>
             <el-button v-else v-perm="'sessions:force'" link type="danger" @click="openForce(row)">
-              强制下线
+              {{ t('session.forceLogout') }}
             </el-button>
           </template>
         </el-table-column>
@@ -54,14 +74,17 @@
       />
     </el-card>
 
-    <el-dialog v-model="forceVisible" title="强制下线" width="460px">
-      <p class="form-tip">
-        下线后该会话立即失效，后续请求需要重新登录；账号本身仍可再次登录。
-      </p>
-      <el-input v-model="reason" type="textarea" :rows="3" placeholder="请填写下线原因（必填）" />
+    <el-dialog v-model="forceVisible" :title="t('session.forceLogout')" width="460px">
+      <p class="form-tip">{{ t('session.forceTip') }}</p>
+      <el-input
+        v-model="reason"
+        type="textarea"
+        :rows="3"
+        :placeholder="t('session.reasonPlaceholder')"
+      />
       <template #footer>
-        <el-button @click="forceVisible = false">取消</el-button>
-        <el-button type="danger" @click="submitForce">确认下线</el-button>
+        <el-button @click="forceVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="danger" @click="submitForce">{{ t('session.forceConfirm') }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -69,6 +92,7 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import OrgTreeSelect from '@/components/OrgTreeSelect.vue'
 import { SESSION_ENTRY } from '@/stores/dict'
@@ -76,6 +100,7 @@ import { exportSessions, forceLogout, pageSessions, type SessionQuery } from '@/
 import type { SessionItem } from '@/api/types'
 import { formatDateTime } from '@/utils/datetime'
 
+const { t } = useI18n()
 const loading = ref(false)
 const forceVisible = ref(false)
 const reason = ref('')
@@ -127,12 +152,12 @@ async function submitForce() {
     return
   }
   if (!reason.value.trim()) {
-    ElMessage.warning('请填写下线原因')
+    ElMessage.warning(t('session.reasonRequired'))
     return
   }
   await forceLogout(target.value.id, reason.value.trim())
   forceVisible.value = false
-  ElMessage.success('该会话已下线')
+  ElMessage.success(t('session.forced'))
   await load()
 }
 

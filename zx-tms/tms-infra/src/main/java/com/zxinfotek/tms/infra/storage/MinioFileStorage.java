@@ -48,7 +48,7 @@ public class MinioFileStorage implements FileStorage {
             return objectKey;
         } catch (Exception e) {
             log.error("对象存储写入失败，objectKey={}", objectKey, e);
-            throw new BizException(CommonErrorCode.COMMON_004, "文件存储服务不可用");
+            throw new BizException(CommonErrorCode.COMMON_004, "msg.infra.storageUnavailable");
         }
     }
 
@@ -61,7 +61,7 @@ public class MinioFileStorage implements FileStorage {
                     .build());
         } catch (Exception e) {
             log.error("对象存储读取失败，objectKey={}", objectKey, e);
-            throw new BizException(CommonErrorCode.COMMON_004, "文件存储服务不可用");
+            throw new BizException(CommonErrorCode.COMMON_004, "msg.infra.storageUnavailable");
         }
     }
 
@@ -74,7 +74,7 @@ public class MinioFileStorage implements FileStorage {
                     .build());
         } catch (Exception e) {
             log.error("对象存储删除失败，objectKey={}", objectKey, e);
-            throw new BizException(CommonErrorCode.COMMON_004, "文件存储服务不可用");
+            throw new BizException(CommonErrorCode.COMMON_004, "msg.infra.storageUnavailable");
         }
     }
 
@@ -89,7 +89,7 @@ public class MinioFileStorage implements FileStorage {
                     .build());
         } catch (Exception e) {
             log.error("生成预签名链接失败，objectKey={}", objectKey, e);
-            throw new BizException(CommonErrorCode.COMMON_004, "文件存储服务不可用");
+            throw new BizException(CommonErrorCode.COMMON_004, "msg.infra.storageUnavailable");
         }
     }
 
@@ -104,7 +104,7 @@ public class MinioFileStorage implements FileStorage {
             synchronized (this) {
                 if (client == null) {
                     if (properties.getEndpoint() == null || properties.getEndpoint().isBlank()) {
-                        throw new BizException(CommonErrorCode.COMMON_004, "未配置对象存储地址");
+                        throw new BizException(CommonErrorCode.COMMON_004, "msg.infra.storageNotConfigured");
                     }
                     client = MinioClient.builder()
                             .endpoint(properties.getEndpoint())

@@ -8,14 +8,14 @@ import lombok.Data;
 @Data
 public class UpdateProfileRequest {
 
-    @NotBlank(message = "请输入昵称")
-    @Size(max = 50, message = "昵称最多 50 个字符")
+    @NotBlank(message = "msg.valid.nicknameRequired")
+    @Size(max = 50, message = "msg.valid.nicknameSize")
     private String nickname;
 
-    @Email(message = "邮箱格式不正确")
-    @Size(max = 128)
+    @Email(message = "msg.valid.emailInvalid")
+    @Size(max = 128, message = "msg.valid.emailSize")
     private String email;
 
-    @Size(max = 30)
+    @Size(max = 30, message = "msg.valid.phoneSize")
     private String phone;
 }

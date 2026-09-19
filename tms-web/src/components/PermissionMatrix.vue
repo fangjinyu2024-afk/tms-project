@@ -1,8 +1,8 @@
 <template>
   <el-table :data="catalog" border size="small" class="matrix">
-    <el-table-column prop="groupName" label="分组" width="110" />
-    <el-table-column prop="menuName" label="菜单" width="140" />
-    <el-table-column label="可配置操作">
+    <el-table-column prop="groupName" :label="t('role.matrixGroup')" width="110" />
+    <el-table-column prop="menuName" :label="t('role.matrixMenu')" width="140" />
+    <el-table-column :label="t('role.matrixActions')">
       <template #default="{ row }">
         <el-checkbox
           v-for="action in row.actions"
@@ -20,6 +20,7 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { PermissionCatalogItem } from '@/api/types'
 
 const props = defineProps<{
@@ -28,6 +29,8 @@ const props = defineProps<{
   disabled?: boolean
 }>()
 const emit = defineEmits<{ (event: 'update:selected', value: string[]): void }>()
+
+const { t } = useI18n()
 
 /**
  * 勾选任一操作自动补齐该菜单的查看权限；取消查看时同步取消该菜单下其他操作。

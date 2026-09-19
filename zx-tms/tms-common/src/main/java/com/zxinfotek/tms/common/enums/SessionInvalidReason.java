@@ -1,7 +1,7 @@
 package com.zxinfotek.tms.common.enums;
 
 /** 会话失效原因，详细设计 6.2.5。 */
-public enum SessionInvalidReason {
+public enum SessionInvalidReason implements Labeled {
 
     LOGOUT("主动退出"),
     FORCE_LOGOUT("强制下线"),
@@ -18,10 +18,12 @@ public enum SessionInvalidReason {
         this.label = label;
     }
 
+    @Override
     public String getCode() {
         return name();
     }
 
+    @Override
     public String getLabel() {
         return label;
     }

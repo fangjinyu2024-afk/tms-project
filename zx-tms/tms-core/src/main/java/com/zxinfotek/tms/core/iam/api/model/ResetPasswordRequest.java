@@ -7,10 +7,10 @@ import lombok.Data;
 @Data
 public class ResetPasswordRequest {
 
-    @NotBlank(message = "重置令牌不能为空")
+    @NotBlank(message = "msg.valid.resetTokenRequired")
     private String token;
 
-    @NotBlank(message = "请输入新密码")
-    @Size(min = 8, max = 64, message = "新密码长度为 8 至 64 位")
+    @NotBlank(message = "msg.valid.newPasswordRequired")
+    @Size(min = 8, max = 64, message = "msg.valid.newPasswordLength")
     private String newPassword;
 }

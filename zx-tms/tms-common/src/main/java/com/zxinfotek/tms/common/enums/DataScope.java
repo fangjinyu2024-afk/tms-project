@@ -1,7 +1,7 @@
 package com.zxinfotek.tms.common.enums;
 
 /** 数据范围，详细设计 6.2.10。 */
-public enum DataScope {
+public enum DataScope implements Labeled {
 
     SELF_ORG("仅成员所属机构", 1),
     ORG_AND_SUB("成员所属机构及下级机构", 2);
@@ -30,10 +30,12 @@ public enum DataScope {
         return one.rank >= other.rank ? one : other;
     }
 
+    @Override
     public String getCode() {
         return name();
     }
 
+    @Override
     public String getLabel() {
         return label;
     }

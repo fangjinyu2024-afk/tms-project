@@ -1,57 +1,65 @@
 <template>
   <div class="login">
+    <div class="lang">
+      <LanguageSwitch />
+    </div>
     <el-card class="login-card">
       <div class="login-brand">
         <div class="brand-icon">T</div>
         <div>
-          <strong>TMS 终端管理系统</strong>
-          <small>POS 终端交付后的集中管理平台</small>
+          <strong>{{ t('app.fullName') }}</strong>
+          <small>{{ t('app.description') }}</small>
         </div>
       </div>
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent>
-        <el-form-item label="登录账号" prop="account">
-          <el-input v-model="form.account" placeholder="请输入登录账号" autocomplete="username" />
+        <el-form-item :label="t('login.account')" prop="account">
+          <el-input v-model="form.account" :placeholder="t('login.accountPlaceholder')" autocomplete="username" />
         </el-form-item>
-        <el-form-item label="密码" prop="password">
+        <el-form-item :label="t('login.password')" prop="password">
           <el-input
             v-model="form.password"
             type="password"
             show-password
-            placeholder="请输入密码"
+            :placeholder="t('login.passwordPlaceholder')"
             autocomplete="current-password"
             @keyup.enter="submit"
           />
         </el-form-item>
-        <el-button type="primary" class="submit" :loading="loading" @click="submit">登录</el-button>
+        <el-button type="primary" class="submit" :loading="loading" @click="submit">
+          {{ t('login.submit') }}
+        </el-button>
         <div class="login-foot">
-          <el-link type="primary" :underline="false" @click="forgotVisible = true">找回密码</el-link>
+          <el-link type="primary" :underline="false" @click="forgotVisible = true">
+            {{ t('login.forgot') }}
+          </el-link>
         </div>
       </el-form>
     </el-card>
 
-    <el-dialog v-model="forgotVisible" title="找回密码" width="420px">
-      <p class="form-tip">
-        仅对已验证邮箱的账号可用；无邮箱的成员请联系有权限的管理员重置密码。
-      </p>
-      <el-input v-model="forgotAccount" placeholder="请输入登录账号" />
+    <el-dialog v-model="forgotVisible" :title="t('login.forgotTitle')" width="420px">
+      <p class="form-tip">{{ t('login.forgotTip') }}</p>
+      <el-input v-model="forgotAccount" :placeholder="t('login.accountPlaceholder')" />
       <template #footer>
-        <el-button @click="forgotVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitForgot">发送找回邮件</el-button>
+        <el-button @click="forgotVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="submitForgot">{{ t('login.forgotSubmit') }}</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import LanguageSwitch from '@/components/LanguageSwitch.vue'
 import { forgotPassword } from '@/api/auth'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
 const route = useRoute()
 const user = useUserStore()
+const { t } = useI18n()
 
 const formRef = ref<FormInstance>()
 const loading = ref(false)
@@ -59,10 +67,10 @@ const forgotVisible = ref(false)
 const forgotAccount = ref('')
 
 const form = reactive({ account: '', password: '' })
-const rules: FormRules = {
-  account: [{ required: true, message: '请输入登录账号', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
-}
+const rules = computed<FormRules>(() => ({
+  account: [{ required: true, message: t('login.accountRequired'), trigger: 'blur' }],
+  password: [{ required: true, message: t('login.passwordRequired'), trigger: 'blur' }]
+}))
 
 async function submit() {
   const valid = await formRef.value?.validate().catch(() => false)
@@ -85,21 +93,29 @@ async function submit() {
 
 async function submitForgot() {
   if (!forgotAccount.value) {
-    ElMessage.warning('请输入登录账号')
+    ElMessage.warning(t('login.accountRequired'))
     return
   }
   await forgotPassword(forgotAccount.value)
   forgotVisible.value = false
-  ElMessage.success('若该账号已验证邮箱，找回邮件已发送')
+  ElMessage.success(t('login.forgotSent'))
 }
 </script>
 
 <style scoped>
 .login {
+  position: relative;
   height: 100%;
   display: grid;
   place-items: center;
   background: linear-gradient(140deg, #1677ff 0%, #0958d9 100%);
+}
+
+.lang {
+  position: absolute;
+  top: 18px;
+  right: 24px;
+  color: #fff;
 }
 
 .login-card {

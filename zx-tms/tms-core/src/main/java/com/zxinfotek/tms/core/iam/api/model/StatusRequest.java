@@ -7,6 +7,6 @@ import lombok.Data;
 @Data
 public class StatusRequest {
 
-    @NotNull(message = "请指定目标状态")
+    @NotNull(message = "msg.valid.statusRequired")
     private EnableStatus status;
 }

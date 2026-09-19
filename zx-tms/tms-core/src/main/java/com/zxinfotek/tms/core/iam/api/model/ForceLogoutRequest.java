@@ -7,7 +7,7 @@ import lombok.Data;
 @Data
 public class ForceLogoutRequest {
 
-    @NotBlank(message = "请填写下线原因")
-    @Size(max = 200)
+    @NotBlank(message = "msg.valid.forceReasonRequired")
+    @Size(max = 200, message = "msg.valid.reasonSize")
     private String reason;
 }

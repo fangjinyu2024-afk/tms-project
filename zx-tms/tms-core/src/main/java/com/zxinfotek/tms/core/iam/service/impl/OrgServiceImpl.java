@@ -1,6 +1,5 @@
 package com.zxinfotek.tms.core.iam.service.impl;
 
-import com.alibaba.excel.annotation.ExcelProperty;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -10,6 +9,7 @@ import com.zxinfotek.tms.common.enums.SessionInvalidReason;
 import com.zxinfotek.tms.common.exception.BizException;
 import com.zxinfotek.tms.common.exception.NotFoundException;
 import com.zxinfotek.tms.common.model.PageResult;
+import com.zxinfotek.tms.common.util.UtcTimes;
 import com.zxinfotek.tms.core.iam.IamErrorCode;
 import com.zxinfotek.tms.core.iam.api.LoginSessionService;
 import com.zxinfotek.tms.core.iam.api.MemberService;
@@ -30,12 +30,11 @@ import com.zxinfotek.tms.core.iam.mapper.OrgMapper;
 import com.zxinfotek.tms.infra.context.DataScopeAssert;
 import com.zxinfotek.tms.infra.context.RequestContextHolder;
 import com.zxinfotek.tms.infra.excel.ExcelExportService;
+import com.zxinfotek.tms.infra.i18n.I18nMessages;
 import com.zxinfotek.tms.infra.mybatis.SnowflakeIdentifierGenerator;
-import lombok.Data;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -147,7 +146,8 @@ public class OrgServiceImpl implements OrgService {
             adminRequest.setOrgId(org.getId());
             adminRequest.setAccount(request.getAdminAccount());
             adminRequest.setNickname(request.getAdminNickname() == null || request.getAdminNickname().isBlank()
-                    ? request.getName() + "管理员" : request.getAdminNickname());
+                    ? I18nMessages.get("msg.org.defaultAdminNickname", request.getName())
+                    : request.getAdminNickname());
             adminRequest.setRoleIds(request.getAdminRoleIds());
             MemberCreateResultVO admin = memberService.create(adminRequest);
             result.setAdminMemberId(admin.getMemberId());
@@ -163,7 +163,7 @@ public class OrgServiceImpl implements OrgService {
         OrgEntity org = requireOrg(id);
         DataScopeAssert.within(org.getTenantId(), org.getOrgPath());
         if (org.getOrgType() == OrgType.PLATFORM) {
-            throw new BizException(IamErrorCode.ORG_004, "平台根机构名称不可修改");
+            throw new BizException(IamErrorCode.ORG_004, "msg.org.platformRootImmutable");
         }
         assertNameUnique(org.getParentId(), request.getName(), id);
         org.setName(request.getName());
@@ -200,17 +200,18 @@ public class OrgServiceImpl implements OrgService {
         Long subCount = orgMapper.selectCount(Wrappers.<OrgEntity>lambdaQuery()
                 .eq(OrgEntity::getParentId, id).eq(OrgEntity::getDeleted, 0));
         if (subCount != null && subCount > 0) {
-            blocking.add("下级机构 " + subCount + " 个");
+            blocking.add(I18nMessages.get("msg.block.subOrg", subCount));
         }
         Long memberCount = memberMapper.selectCount(Wrappers.<MemberEntity>lambdaQuery()
                 .likeRight(MemberEntity::getOrgPath, org.getOrgPath()));
         if (memberCount != null && memberCount > 0) {
-            blocking.add("成员 " + memberCount + " 人");
+            blocking.add(I18nMessages.get("msg.block.member", memberCount));
         }
         referenceProviders.forEach(provider ->
                 blocking.addAll(provider.blockingReferences(id, org.getOrgPath())));
         if (!blocking.isEmpty()) {
-            throw new BizException(IamErrorCode.ORG_003, "存在 " + String.join("、", blocking) + "，不能删除");
+            throw new BizException(IamErrorCode.ORG_003, "msg.org.deleteBlocked",
+                    String.join(I18nMessages.get("msg.common.separator"), blocking));
         }
         orgMapper.deleteById(id);
     }
@@ -218,19 +219,20 @@ public class OrgServiceImpl implements OrgService {
     @Override
     public String export(OrgQuery query) {
         List<OrgEntity> orgs = orgMapper.selectOrgPage(new Page<>(1, 10000), buildWrapper(query)).getRecords();
-        List<OrgExportRow> rows = orgs.stream().map(org -> {
-            OrgExportRow row = new OrgExportRow();
-            row.setName(org.getName());
-            row.setParentName(orgName(org.getParentId()));
-            row.setOrgType(org.getOrgType() == null ? "" : org.getOrgType().getLabel());
-            row.setContactName(org.getContactName());
-            row.setContactPhone(org.getContactPhone());
-            row.setStatus(org.getStatus() == null ? "" : org.getStatus().getLabel());
-            row.setCreateTime(org.getCreateTime());
-            return row;
-        }).collect(Collectors.toList());
+        List<List<Object>> rows = orgs.stream().map(org -> List.<Object>of(
+                text(org.getName()),
+                text(orgName(org.getParentId())),
+                text(I18nMessages.label(org.getOrgType())),
+                text(org.getContactName()),
+                text(org.getContactPhone()),
+                text(I18nMessages.label(org.getStatus())),
+                UtcTimes.formatCompact(org.getCreateTime()))).collect(Collectors.toList());
         return excelExportService.export("org", RequestContextHolder.get().getTenantId(),
-                "机构", OrgExportRow.class, rows);
+                "export.sheet.org",
+                List.of("export.column.orgName", "export.column.parentOrg", "export.column.orgType",
+                        "export.column.contactName", "export.column.contactPhone", "export.column.status",
+                        "export.column.createTime"),
+                rows);
     }
 
     @Override
@@ -329,7 +331,7 @@ public class OrgServiceImpl implements OrgService {
         vo.setParentName(orgName(org.getParentId()));
         vo.setOrgPath(org.getOrgPath());
         vo.setOrgType(org.getOrgType() == null ? null : org.getOrgType().getCode());
-        vo.setOrgTypeLabel(org.getOrgType() == null ? null : org.getOrgType().getLabel());
+        vo.setOrgTypeLabel(I18nMessages.label(org.getOrgType()));
         vo.setName(org.getName());
         vo.setContactName(org.getContactName());
         vo.setContactPhone(org.getContactPhone());
@@ -338,32 +340,19 @@ public class OrgServiceImpl implements OrgService {
         return vo;
     }
 
+    private static String text(String value) {
+        return value == null ? "" : value;
+    }
+
     private OrgEntity requireOrg(Long id) {
         if (id == null) {
-            throw new BizException(IamErrorCode.ORG_002, "请选择上级机构");
+            throw new BizException(IamErrorCode.ORG_002, "msg.org.parentRequired");
         }
         OrgEntity org = orgMapper.selectById(id);
         if (org == null) {
-            throw new NotFoundException("机构不存在");
+            throw new NotFoundException("msg.org.notFound");
         }
         return org;
     }
 
-    @Data
-    public static class OrgExportRow {
-        @ExcelProperty("机构名称")
-        private String name;
-        @ExcelProperty("上级机构")
-        private String parentName;
-        @ExcelProperty("机构类型")
-        private String orgType;
-        @ExcelProperty("联系人")
-        private String contactName;
-        @ExcelProperty("联系方式")
-        private String contactPhone;
-        @ExcelProperty("状态")
-        private String status;
-        @ExcelProperty("创建时间")
-        private LocalDateTime createTime;
-    }
 }

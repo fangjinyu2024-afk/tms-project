@@ -18,11 +18,12 @@ import java.util.stream.Collectors;
  */
 public final class PermissionCatalog {
 
-    public static final String GROUP_HOME = "工作台";
-    public static final String GROUP_DEVICE = "设备管理";
-    public static final String GROUP_MAINTAIN = "远程维护";
-    public static final String GROUP_ACTIVATION = "激活与证书";
-    public static final String GROUP_SYSTEM = "系统管理";
+    /** 菜单分组：分组键用于消息资源解析，中文名称为默认值 */
+    public static final MenuGroup GROUP_HOME = new MenuGroup("home", "工作台");
+    public static final MenuGroup GROUP_DEVICE = new MenuGroup("device", "设备管理");
+    public static final MenuGroup GROUP_MAINTAIN = new MenuGroup("maintain", "远程维护");
+    public static final MenuGroup GROUP_ACTIVATION = new MenuGroup("activation", "激活与证书");
+    public static final MenuGroup GROUP_SYSTEM = new MenuGroup("system", "系统管理");
 
     /** 操作编码与名称，详细设计 6.2.2。 */
     public static final Map<String, String> ACTION_NAMES = actionNames();
@@ -84,7 +85,7 @@ public final class PermissionCatalog {
                         menu.menuKey() + ":" + action.action(),
                         menu.menuKey(),
                         menu.menuName(),
-                        menu.groupName(),
+                        menu.group().name(),
                         action.action(),
                         ACTION_NAMES.getOrDefault(action.action(), action.action()),
                         action.platformOnly(),
@@ -142,22 +143,22 @@ public final class PermissionCatalog {
         return List.copyOf(menus);
     }
 
-    private static MenuDefinition menu(String menuKey, String menuName, String groupName,
+    private static MenuDefinition menu(String menuKey, String menuName, MenuGroup group,
                                        Set<String> platformOnlyActions, String... actions) {
         List<ActionDefinition> definitions = new ArrayList<>();
         for (String action : actions) {
             definitions.add(new ActionDefinition(action, platformOnlyActions.contains(action)));
         }
-        return new MenuDefinition(menuKey, menuName, groupName, List.copyOf(definitions));
+        return new MenuDefinition(menuKey, menuName, group, List.copyOf(definitions));
     }
 
-    private static MenuDefinition platformMenu(String menuKey, String menuName, String groupName,
+    private static MenuDefinition platformMenu(String menuKey, String menuName, MenuGroup group,
                                                String... actions) {
         List<ActionDefinition> definitions = new ArrayList<>();
         for (String action : actions) {
             definitions.add(new ActionDefinition(action, true));
         }
-        return new MenuDefinition(menuKey, menuName, groupName, List.copyOf(definitions));
+        return new MenuDefinition(menuKey, menuName, group, List.copyOf(definitions));
     }
 
     private static Map<String, String> actionNames() {
@@ -192,7 +193,10 @@ public final class PermissionCatalog {
     public record ActionDefinition(String action, boolean platformOnly) {
     }
 
-    public record MenuDefinition(String menuKey, String menuName, String groupName,
+    public record MenuGroup(String groupKey, String name) {
+    }
+
+    public record MenuDefinition(String menuKey, String menuName, MenuGroup group,
                                  List<ActionDefinition> actions) {
     }
 

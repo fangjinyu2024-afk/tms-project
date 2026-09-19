@@ -10,5 +10,11 @@ public interface ErrorCode {
 
     String getCode();
 
+    /** 默认中文消息，接口响应按请求语言经消息资源解析，解析不到时回落到本值 */
     String getMessage();
+
+    /** 消息资源键，默认取 {@code error.错误码} */
+    default String getMessageKey() {
+        return "error." + getCode();
+    }
 }

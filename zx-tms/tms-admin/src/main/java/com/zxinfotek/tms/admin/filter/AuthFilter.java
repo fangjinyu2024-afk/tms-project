@@ -11,6 +11,7 @@ import com.zxinfotek.tms.core.iam.api.PermissionService;
 import com.zxinfotek.tms.core.iam.api.model.SessionContextDTO;
 import com.zxinfotek.tms.infra.context.RequestContext;
 import com.zxinfotek.tms.infra.context.RequestContextHolder;
+import com.zxinfotek.tms.infra.i18n.I18nMessages;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -150,7 +151,8 @@ public class AuthFilter extends OncePerRequestFilter {
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setHeader("X-Biz-Code", errorCode.getCode());
-        Result<Void> result = Result.fail(errorCode);
+        Result<Void> result = Result.fail(errorCode,
+                I18nMessages.getOrDefault(errorCode.getMessageKey(), errorCode.getMessage()));
         result.setTraceId(RequestContextHolder.get().getTraceId());
         response.getWriter().write(objectMapper.writeValueAsString(result));
     }

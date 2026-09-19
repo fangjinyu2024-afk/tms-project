@@ -7,11 +7,12 @@ public class PermissionException extends BaseException {
         super(errorCode);
     }
 
-    public PermissionException(ErrorCode errorCode, String message) {
-        super(errorCode, message);
+    public PermissionException(ErrorCode errorCode, String messageKey, Object... messageArgs) {
+        super(errorCode, messageKey, messageArgs);
     }
 
-    public PermissionException(ErrorCode errorCode, String message, Object detail) {
-        super(errorCode, message, detail);
+    public PermissionException withDetail(Object detail) {
+        detail(detail);
+        return this;
     }
 }

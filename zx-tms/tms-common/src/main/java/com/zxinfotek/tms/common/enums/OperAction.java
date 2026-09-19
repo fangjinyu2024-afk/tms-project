@@ -1,7 +1,7 @@
 package com.zxinfotek.tms.common.enums;
 
 /** 操作类型，详细设计 6.2.8。 */
-public enum OperAction {
+public enum OperAction implements Labeled {
 
     CREATE("新增"),
     UPDATE("编辑"),
@@ -27,10 +27,12 @@ public enum OperAction {
         this.label = label;
     }
 
+    @Override
     public String getCode() {
         return name();
     }
 
+    @Override
     public String getLabel() {
         return label;
     }

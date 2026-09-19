@@ -2,30 +2,53 @@
   <div class="page">
     <el-card>
       <div class="page-toolbar">
-        <el-input v-model="query.keyword" placeholder="产品名称" clearable style="width: 200px" />
-        <el-select v-model="query.category" placeholder="产品类别" clearable style="width: 160px">
-          <el-option v-for="item in PRODUCT_CATEGORY" :key="item.value" :label="item.label" :value="item.value" />
+        <el-input
+          v-model="query.keyword"
+          :placeholder="t('product.namePlaceholder')"
+          clearable
+          style="width: 200px"
+        />
+        <el-select
+          v-model="query.category"
+          :placeholder="t('product.category')"
+          clearable
+          style="width: 160px"
+        >
+          <el-option
+            v-for="item in PRODUCT_CATEGORY"
+            :key="item.value"
+            :label="t(item.labelKey)"
+            :value="item.value"
+          />
         </el-select>
-        <el-button type="primary" @click="load(1)">查询</el-button>
-        <el-button @click="reset">重置</el-button>
+        <el-button type="primary" @click="load(1)">{{ t('common.search') }}</el-button>
+        <el-button @click="reset">{{ t('common.reset') }}</el-button>
         <span class="grow" />
-        <el-button v-perm="'products:create'" type="primary" @click="openCreate">新增产品</el-button>
-        <el-button v-perm="'products:export'" @click="onExport">导出</el-button>
+        <el-button v-perm="'products:create'" type="primary" @click="openCreate">
+          {{ t('product.createTitle') }}
+        </el-button>
+        <el-button v-perm="'products:export'" @click="onExport">{{ t('common.export') }}</el-button>
       </div>
 
       <el-table :data="page.list" v-loading="loading" border>
-        <el-table-column prop="name" label="产品名称" min-width="160" />
-        <el-table-column prop="categoryLabel" label="产品类别" width="120" />
-        <el-table-column label="型号" min-width="220">
+        <el-table-column prop="name" :label="t('product.name')" min-width="160" />
+        <el-table-column prop="categoryLabel" :label="t('product.category')" width="120" />
+        <el-table-column :label="t('product.models')" min-width="220">
           <template #default="{ row }">
-            <el-tag v-for="model in row.models" :key="model.id" size="small" class="tag">{{ model.model }}</el-tag>
+            <el-tag v-for="model in row.models" :key="model.id" size="small" class="tag">
+              {{ model.model }}
+            </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="description" label="描述" min-width="200" />
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column prop="description" :label="t('product.description')" min-width="200" />
+        <el-table-column :label="t('common.action')" width="180" fixed="right">
           <template #default="{ row }">
-            <el-button v-perm="'products:edit'" link type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button v-perm="'products:delete'" link type="danger" @click="onDelete(row)">删除</el-button>
+            <el-button v-perm="'products:edit'" link type="primary" @click="openEdit(row)">
+              {{ t('common.edit') }}
+            </el-button>
+            <el-button v-perm="'products:delete'" link type="danger" @click="onDelete(row)">
+              {{ t('common.delete') }}
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -40,43 +63,57 @@
       />
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="editing ? '编辑产品' : '新增产品'" width="600px">
+    <el-dialog
+      v-model="dialogVisible"
+      :title="editing ? t('product.editTitle') : t('product.createTitle')"
+      width="600px"
+    >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="96px">
-        <el-form-item label="产品类别" prop="category">
+        <el-form-item :label="t('product.category')" prop="category">
           <el-select v-model="form.category" style="width: 100%">
-            <el-option v-for="item in PRODUCT_CATEGORY" :key="item.value" :label="item.label" :value="item.value" />
+            <el-option
+              v-for="item in PRODUCT_CATEGORY"
+              :key="item.value"
+              :label="t(item.labelKey)"
+              :value="item.value"
+            />
           </el-select>
         </el-form-item>
-        <el-form-item label="产品名称" prop="name">
+        <el-form-item :label="t('product.name')" prop="name">
           <el-input v-model="form.name" />
         </el-form-item>
-        <el-form-item label="图片路径">
-          <el-input v-model="form.imagePath" placeholder="对象存储路径，选填" />
+        <el-form-item :label="t('product.imagePath')">
+          <el-input v-model="form.imagePath" :placeholder="t('product.imagePlaceholder')" />
         </el-form-item>
-        <el-form-item label="描述">
+        <el-form-item :label="t('product.description')">
           <el-input v-model="form.description" type="textarea" :rows="2" />
         </el-form-item>
-        <el-form-item label="型号">
+        <el-form-item :label="t('product.models')">
           <div class="models">
             <div v-for="(model, index) in form.models" :key="index" class="model-row">
-              <el-input v-model="model.model" placeholder="型号标识，平台内唯一" />
-              <el-button link type="danger" @click="form.models.splice(index, 1)">移除</el-button>
+              <el-input v-model="model.model" :placeholder="t('product.modelPlaceholder')" />
+              <el-button link type="danger" @click="form.models.splice(index, 1)">
+                {{ t('product.removeModel') }}
+              </el-button>
             </div>
-            <el-button link type="primary" @click="form.models.push({ model: '' })">添加型号</el-button>
-            <p class="form-tip">已被设备、客户授权或升级内容引用的型号不能移除。</p>
+            <el-button link type="primary" @click="form.models.push({ model: '' })">
+              {{ t('product.addModel') }}
+            </el-button>
+            <p class="form-tip">{{ t('product.modelTip') }}</p>
           </div>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="submit">保存</el-button>
+        <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" :loading="saving" @click="submit">{{ t('common.save') }}</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { PRODUCT_CATEGORY } from '@/stores/dict'
 import {
@@ -90,6 +127,7 @@ import {
 } from '@/api/product'
 import type { Id, ProductItem } from '@/api/types'
 
+const { t } = useI18n()
 const loading = ref(false)
 const saving = ref(false)
 const dialogVisible = ref(false)
@@ -112,10 +150,10 @@ const form = reactive({
   models: [{ model: '' }] as Array<{ id?: Id; model: string }>
 })
 
-const rules: FormRules = {
-  category: [{ required: true, message: '请选择产品类别', trigger: 'change' }],
-  name: [{ required: true, message: '请输入产品名称', trigger: 'blur' }]
-}
+const rules = computed<FormRules>(() => ({
+  category: [{ required: true, message: t('product.categoryRequired'), trigger: 'change' }],
+  name: [{ required: true, message: t('product.nameRequired'), trigger: 'blur' }]
+}))
 
 onMounted(() => load(1))
 
@@ -174,7 +212,7 @@ async function submit() {
   }
   const models = form.models.filter((model) => model.model.trim())
   if (!models.length) {
-    ElMessage.warning('请至少添加一个型号')
+    ElMessage.warning(t('product.modelRequired'))
     return
   }
   saving.value = true
@@ -185,7 +223,7 @@ async function submit() {
     } else {
       await createProduct(payload)
     }
-    ElMessage.success('产品已保存')
+    ElMessage.success(t('common.saved'))
     dialogVisible.value = false
     await load()
   } finally {
@@ -194,9 +232,13 @@ async function submit() {
 }
 
 async function onDelete(row: ProductItem) {
-  await ElMessageBox.confirm(`确认删除产品「${row.name}」？`, '删除产品', { type: 'warning' })
+  await ElMessageBox.confirm(
+    t('product.deleteConfirm', { name: row.name }),
+    t('product.deleteTitle'),
+    { type: 'warning' }
+  )
   await deleteProduct(row.id)
-  ElMessage.success('产品已删除')
+  ElMessage.success(t('common.deleted'))
   await load()
 }
 

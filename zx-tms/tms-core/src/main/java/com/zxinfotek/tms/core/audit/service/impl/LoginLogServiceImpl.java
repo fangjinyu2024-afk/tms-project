@@ -1,6 +1,5 @@
 package com.zxinfotek.tms.core.audit.service.impl;
 
-import com.alibaba.excel.annotation.ExcelProperty;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -14,7 +13,7 @@ import com.zxinfotek.tms.core.audit.entity.LoginLogEntity;
 import com.zxinfotek.tms.core.audit.mapper.LoginLogMapper;
 import com.zxinfotek.tms.infra.context.RequestContextHolder;
 import com.zxinfotek.tms.infra.excel.ExcelExportService;
-import lombok.Data;
+import com.zxinfotek.tms.infra.i18n.I18nMessages;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -87,19 +86,20 @@ public class LoginLogServiceImpl implements LoginLogService {
     public String export(LoginLogQuery query) {
         List<LoginLogEntity> logs = loginLogMapper
                 .selectLoginLogPage(new Page<>(1, 10000), buildWrapper(query)).getRecords();
-        List<LoginLogExportRow> rows = logs.stream().map(entity -> {
-            LoginLogExportRow row = new LoginLogExportRow();
-            row.setAccount(entity.getAccount());
-            row.setEntry(entity.getEntry() == null ? "" : entity.getEntry().getLabel());
-            row.setResult(entity.getResult() == null ? "" : entity.getResult().getLabel());
-            row.setFailReason(entity.getFailReason());
-            row.setClientIp(entity.getClientIp());
-            row.setUserAgent(entity.getUserAgent());
-            row.setLoginTime(entity.getLoginTime());
-            return row;
-        }).collect(Collectors.toList());
+        List<List<Object>> rows = logs.stream().map(entity -> List.<Object>of(
+                text(entity.getAccount()),
+                text(I18nMessages.label(entity.getEntry())),
+                text(I18nMessages.label(entity.getResult())),
+                text(I18nMessages.getOrDefault(entity.getFailReason(), entity.getFailReason())),
+                text(entity.getClientIp()),
+                text(entity.getUserAgent()),
+                UtcTimes.formatCompact(entity.getLoginTime()))).collect(Collectors.toList());
         return excelExportService.export("login-log", RequestContextHolder.get().getTenantId(),
-                "登录日志", LoginLogExportRow.class, rows);
+                "export.sheet.loginLog",
+                List.of("export.column.account", "export.column.entry", "export.column.result",
+                        "export.column.failReason", "export.column.clientIp", "export.column.userAgent",
+                        "export.column.loginTime"),
+                rows);
     }
 
     private LambdaQueryWrapper<LoginLogEntity> buildWrapper(LoginLogQuery query) {
@@ -125,6 +125,10 @@ public class LoginLogServiceImpl implements LoginLogService {
         return wrapper;
     }
 
+    private static String text(String value) {
+        return value == null ? "" : value;
+    }
+
     private LoginLogVO toVO(LoginLogEntity entity) {
         LoginLogVO vo = new LoginLogVO();
         vo.setId(entity.getId());
@@ -132,31 +136,14 @@ public class LoginLogServiceImpl implements LoginLogService {
         vo.setMemberId(entity.getMemberId());
         vo.setOrgId(entity.getOrgId());
         vo.setEntry(entity.getEntry() == null ? null : entity.getEntry().getCode());
-        vo.setEntryLabel(entity.getEntry() == null ? null : entity.getEntry().getLabel());
+        vo.setEntryLabel(I18nMessages.label(entity.getEntry()));
         vo.setResult(entity.getResult() == null ? null : entity.getResult().getCode());
-        vo.setResultLabel(entity.getResult() == null ? null : entity.getResult().getLabel());
-        vo.setFailReason(entity.getFailReason());
+        vo.setResultLabel(I18nMessages.label(entity.getResult()));
+        vo.setFailReason(I18nMessages.getOrDefault(entity.getFailReason(), entity.getFailReason()));
         vo.setClientIp(entity.getClientIp());
         vo.setUserAgent(entity.getUserAgent());
         vo.setLoginTime(entity.getLoginTime());
         return vo;
     }
 
-    @Data
-    public static class LoginLogExportRow {
-        @ExcelProperty("账号")
-        private String account;
-        @ExcelProperty("入口")
-        private String entry;
-        @ExcelProperty("结果")
-        private String result;
-        @ExcelProperty("失败原因")
-        private String failReason;
-        @ExcelProperty("IP")
-        private String clientIp;
-        @ExcelProperty("浏览器／系统")
-        private String userAgent;
-        @ExcelProperty("登录时间")
-        private LocalDateTime loginTime;
-    }
 }

@@ -11,17 +11,17 @@ import java.util.List;
 @Data
 public class RoleSaveRequest {
 
-    @NotBlank(message = "请输入角色名称")
-    @Size(max = 50, message = "角色名称最多 50 个字符")
+    @NotBlank(message = "msg.valid.roleNameRequired")
+    @Size(max = 50, message = "msg.valid.roleNameSize")
     private String name;
 
-    @Size(max = 200)
+    @Size(max = 200, message = "msg.valid.descriptionSize")
     private String description;
 
     /** 归属机构，新增时必填；编辑时忽略 */
     private Long ownerOrgId;
 
-    @NotNull(message = "请选择可管理范围")
+    @NotNull(message = "msg.valid.dataScopeRequired")
     private DataScope dataScope;
 
     private List<String> permCodes;

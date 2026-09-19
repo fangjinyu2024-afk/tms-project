@@ -1,6 +1,5 @@
 package com.zxinfotek.tms.core.iam.service.impl;
 
-import com.alibaba.excel.annotation.ExcelProperty;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -12,6 +11,7 @@ import com.zxinfotek.tms.common.exception.NotFoundException;
 import com.zxinfotek.tms.common.exception.PermErrorCode;
 import com.zxinfotek.tms.common.exception.PermissionException;
 import com.zxinfotek.tms.common.model.PageResult;
+import com.zxinfotek.tms.common.util.UtcTimes;
 import com.zxinfotek.tms.core.iam.IamErrorCode;
 import com.zxinfotek.tms.core.iam.api.PermissionService;
 import com.zxinfotek.tms.core.iam.api.RoleService;
@@ -34,11 +34,10 @@ import com.zxinfotek.tms.infra.context.DataScopeAssert;
 import com.zxinfotek.tms.infra.context.RequestContext;
 import com.zxinfotek.tms.infra.context.RequestContextHolder;
 import com.zxinfotek.tms.infra.excel.ExcelExportService;
-import lombok.Data;
+import com.zxinfotek.tms.infra.i18n.I18nMessages;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -107,7 +106,7 @@ public class RoleServiceImpl implements RoleService {
         Long ownerOrgId = request.getOwnerOrgId() == null ? context.getOrgId() : request.getOwnerOrgId();
         OrgEntity owner = orgMapper.selectById(ownerOrgId);
         if (owner == null) {
-            throw new NotFoundException("归属机构不存在");
+            throw new NotFoundException("msg.role.ownerOrgNotFound");
         }
         DataScopeAssert.within(owner.getTenantId(), owner.getOrgPath());
         assertNameUnique(ownerOrgId, request.getName(), null);
@@ -145,7 +144,7 @@ public class RoleServiceImpl implements RoleService {
         role.setDataScope(request.getDataScope());
         role.setVersion(request.getVersion());
         if (roleMapper.updateById(role) == 0) {
-            throw new ConflictException("角色已被其他人修改，请刷新后重试");
+            throw new ConflictException("msg.role.conflict");
         }
         savePermCodes(id, granted);
         roleMapper.increasePermVersion(id);
@@ -161,7 +160,7 @@ public class RoleServiceImpl implements RoleService {
         Long ownerOrgId = context.getOrgId();
         OrgEntity owner = orgMapper.selectById(ownerOrgId);
         if (owner == null) {
-            throw new NotFoundException("归属机构不存在");
+            throw new NotFoundException("msg.role.ownerOrgNotFound");
         }
 
         String name = nextCopyName(ownerOrgId, source.getName());
@@ -207,8 +206,7 @@ public class RoleServiceImpl implements RoleService {
         Long referenced = memberRoleMapper.selectCount(
                 Wrappers.<MemberRoleEntity>lambdaQuery().eq(MemberRoleEntity::getRoleId, id));
         if (referenced != null && referenced > 0) {
-            throw new BizException(IamErrorCode.ROLE_003,
-                    "角色已被 " + referenced + " 名成员引用，不能删除");
+            throw new BizException(IamErrorCode.ROLE_003, "msg.role.referenced", referenced);
         }
         rolePermMapper.delete(Wrappers.<RolePermEntity>lambdaQuery().eq(RolePermEntity::getRoleId, id));
         roleMapper.deleteById(id);
@@ -219,7 +217,7 @@ public class RoleServiceImpl implements RoleService {
     public List<RoleOptionVO> assignableOptions(Long orgId) {
         OrgEntity org = orgMapper.selectById(orgId);
         if (org == null) {
-            throw new NotFoundException("机构不存在");
+            throw new NotFoundException("msg.org.notFound");
         }
         Set<String> grantable = permissionService.grantablePermCodes(orgId);
         Set<String> openedMenus = permissionService.tenantMenuKeys(org.getTenantId());
@@ -250,19 +248,20 @@ public class RoleServiceImpl implements RoleService {
     public String export(RoleQuery query) {
         List<RoleEntity> roles = roleMapper.selectRolePage(
                 new Page<>(1, 10000), buildWrapper(query)).getRecords();
-        List<RoleExportRow> rows = roles.stream().map(role -> {
-            RoleExportRow row = new RoleExportRow();
-            row.setName(role.getName());
-            row.setOwnerOrgName(orgName(role.getOwnerOrgId()));
-            row.setDataScope(role.getDataScope() == null ? "" : role.getDataScope().getLabel());
-            row.setBuiltin(role.getBuiltinCode() != null ? "是" : "否");
-            row.setStatus(role.getStatus() == null ? "" : role.getStatus().getLabel());
-            row.setDescription(role.getDescription());
-            row.setCreateTime(role.getCreateTime());
-            return row;
-        }).collect(Collectors.toList());
+        List<List<Object>> rows = roles.stream().map(role -> List.<Object>of(
+                text(role.getName()),
+                text(orgName(role.getOwnerOrgId())),
+                text(I18nMessages.label(role.getDataScope())),
+                I18nMessages.get(role.getBuiltinCode() != null ? "msg.common.yes" : "msg.common.no"),
+                text(I18nMessages.label(role.getStatus())),
+                text(role.getDescription()),
+                UtcTimes.formatCompact(role.getCreateTime()))).collect(Collectors.toList());
         return excelExportService.export("role", RequestContextHolder.get().getTenantId(),
-                "角色", RoleExportRow.class, rows);
+                "export.sheet.role",
+                List.of("export.column.roleName", "export.column.ownerOrg", "export.column.dataScope",
+                        "export.column.builtin", "export.column.status", "export.column.description",
+                        "export.column.createTime"),
+                rows);
     }
 
     /**
@@ -309,7 +308,7 @@ public class RoleServiceImpl implements RoleService {
         }
         List<RoleEntity> roles = roleMapper.selectBatchIds(roleIds);
         if (roles.size() != new HashSet<>(roleIds).size()) {
-            throw new NotFoundException("存在不可用的角色");
+            throw new NotFoundException("msg.role.someUnavailable");
         }
         Set<String> grantable = permissionService.grantablePermCodes(orgIdOfPath(targetOrgPath));
         Set<String> openedMenus = permissionService.tenantMenuKeys(tenantId);
@@ -317,18 +316,17 @@ public class RoleServiceImpl implements RoleService {
         for (RoleEntity role : roles) {
             if (!role.getTenantId().equals(tenantId)
                     || !targetOrgPath.startsWith(role.getOwnerOrgPath())) {
-                throw new PermissionException(PermErrorCode.PERM_002, "角色「" + role.getName() + "」不在可分配范围内");
+                throw new PermissionException(PermErrorCode.PERM_002, "msg.role.outOfScope", role.getName());
             }
             if (role.getStatus() != EnableStatus.ENABLED) {
-                throw new BizException(IamErrorCode.ROLE_001, "角色「" + role.getName() + "」已停用");
+                throw new BizException(IamErrorCode.ROLE_001, "msg.role.disabled", role.getName());
             }
             // 未开通菜单的权限码不会进入有效权限，比对时按租户已开通范围裁剪后再判断是否越权
             List<String> effective = permsByRole.getOrDefault(role.getId(), List.of()).stream()
                     .filter(code -> openedMenus.contains(code.substring(0, code.indexOf(':'))))
                     .collect(Collectors.toList());
             if (!grantable.containsAll(effective)) {
-                throw new PermissionException(PermErrorCode.PERM_003,
-                        "无权分配角色「" + role.getName() + "」");
+                throw new PermissionException(PermErrorCode.PERM_003, "msg.role.notAssignable", role.getName());
             }
         }
     }
@@ -345,13 +343,13 @@ public class RoleServiceImpl implements RoleService {
         List<String> unknown = requested.stream()
                 .filter(code -> !PermissionCatalog.exists(code)).collect(Collectors.toList());
         if (!unknown.isEmpty()) {
-            throw new BizException(PermErrorCode.PERM_003, "存在未登记的权限码", unknown);
+            throw new BizException(PermErrorCode.PERM_003, "msg.perm.unknownCode").withDetail(unknown);
         }
         List<String> beyond = requested.stream()
                 .filter(code -> !grantable.contains(code) && !existing.contains(code))
                 .collect(Collectors.toList());
         if (!beyond.isEmpty()) {
-            throw new BizException(PermErrorCode.PERM_003, "包含无权授予的权限项", beyond);
+            throw new BizException(PermErrorCode.PERM_003).withDetail(beyond);
         }
         Set<String> result = new LinkedHashSet<>(requested);
         // 操作者无权维护的既有权限保留只读，不因本次保存被移除
@@ -407,7 +405,7 @@ public class RoleServiceImpl implements RoleService {
         DataScopeAssert.within(role.getTenantId(), role.getOwnerOrgPath());
         // 归属机构是唯一有权维护该角色的机构
         if (!role.getOwnerOrgId().equals(RequestContextHolder.get().getOrgId())) {
-            throw new PermissionException(PermErrorCode.PERM_002, "只有角色归属机构可以维护该角色");
+            throw new PermissionException(PermErrorCode.PERM_002, "msg.role.ownerOnly");
         }
     }
 
@@ -426,7 +424,7 @@ public class RoleServiceImpl implements RoleService {
     private String nextCopyName(Long ownerOrgId, String sourceName) {
         String base = sourceName.length() > 44 ? sourceName.substring(0, 44) : sourceName;
         for (int index = 1; index < 100; index++) {
-            String candidate = base + " 副本" + (index == 1 ? "" : index);
+            String candidate = I18nMessages.get("msg.role.copySuffix", base, index == 1 ? "" : index);
             Long count = roleMapper.selectCount(Wrappers.<RoleEntity>lambdaQuery()
                     .eq(RoleEntity::getOwnerOrgId, ownerOrgId)
                     .eq(RoleEntity::getName, candidate));
@@ -476,12 +474,16 @@ public class RoleServiceImpl implements RoleService {
         vo.setOwnerOrgId(role.getOwnerOrgId());
         vo.setOwnerOrgName(orgName(role.getOwnerOrgId()));
         vo.setDataScope(role.getDataScope() == null ? null : role.getDataScope().getCode());
-        vo.setDataScopeLabel(role.getDataScope() == null ? null : role.getDataScope().getLabel());
+        vo.setDataScopeLabel(I18nMessages.label(role.getDataScope()));
         vo.setBuiltin(role.getBuiltinCode() != null);
         vo.setStatus(role.getStatus() == null ? null : role.getStatus().getCode());
         vo.setVersion(role.getVersion());
         vo.setCreateTime(role.getCreateTime());
         return vo;
+    }
+
+    private static String text(String value) {
+        return value == null ? "" : value;
     }
 
     private String orgName(Long orgId) {
@@ -497,26 +499,9 @@ public class RoleServiceImpl implements RoleService {
     private RoleEntity requireRole(Long id) {
         RoleEntity role = roleMapper.selectById(id);
         if (role == null) {
-            throw new NotFoundException("角色不存在");
+            throw new NotFoundException("msg.role.notFound");
         }
         return role;
     }
 
-    @Data
-    public static class RoleExportRow {
-        @ExcelProperty("角色名称")
-        private String name;
-        @ExcelProperty("归属机构")
-        private String ownerOrgName;
-        @ExcelProperty("可管理范围")
-        private String dataScope;
-        @ExcelProperty("内置")
-        private String builtin;
-        @ExcelProperty("状态")
-        private String status;
-        @ExcelProperty("说明")
-        private String description;
-        @ExcelProperty("创建时间")
-        private LocalDateTime createTime;
-    }
 }

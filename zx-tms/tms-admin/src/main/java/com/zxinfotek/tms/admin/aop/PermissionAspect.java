@@ -45,8 +45,8 @@ public class PermissionAspect {
         if (!requiresPerm.value().isEmpty()) {
             DataScope scope = context.scopeOf(requiresPerm.value());
             if (scope == null) {
-                throw new PermissionException(PermErrorCode.PERM_001,
-                        "无此操作权限：" + requiresPerm.value());
+                throw new PermissionException(PermErrorCode.PERM_001, "msg.web.noPermissionCode",
+                        requiresPerm.value());
             }
             return scope;
         }
@@ -55,7 +55,7 @@ public class PermissionAspect {
             matched = DataScope.max(matched, context.scopeOf(permCode));
         }
         if (matched == null) {
-            throw new PermissionException(PermErrorCode.PERM_001, "无此操作权限");
+            throw new PermissionException(PermErrorCode.PERM_001);
         }
         return matched;
     }

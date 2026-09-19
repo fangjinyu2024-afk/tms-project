@@ -8,6 +8,6 @@ import java.util.List;
 @Data
 public class AssignRoleRequest {
 
-    @NotEmpty(message = "至少选择一个角色")
+    @NotEmpty(message = "msg.valid.rolesRequired")
     private List<Long> roleIds;
 }

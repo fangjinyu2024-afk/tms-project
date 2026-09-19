@@ -2,41 +2,73 @@
   <div class="page">
     <el-card>
       <div class="page-toolbar">
-        <el-input v-model="query.keyword" placeholder="账号或 IP" clearable style="width: 200px" />
-        <el-select v-model="query.result" placeholder="登录结果" clearable style="width: 140px">
-          <el-option v-for="item in LOGIN_RESULT" :key="item.value" :label="item.label" :value="item.value" />
+        <el-input
+          v-model="query.keyword"
+          :placeholder="t('loginLog.keywordPlaceholder')"
+          clearable
+          style="width: 200px"
+        />
+        <el-select
+          v-model="query.result"
+          :placeholder="t('loginLog.result')"
+          clearable
+          style="width: 140px"
+        >
+          <el-option
+            v-for="item in LOGIN_RESULT"
+            :key="item.value"
+            :label="t(item.labelKey)"
+            :value="item.value"
+          />
         </el-select>
-        <el-select v-model="query.entry" placeholder="登录入口" clearable style="width: 140px">
-          <el-option v-for="item in SESSION_ENTRY" :key="item.value" :label="item.label" :value="item.value" />
+        <el-select
+          v-model="query.entry"
+          :placeholder="t('loginLog.entry')"
+          clearable
+          style="width: 140px"
+        >
+          <el-option
+            v-for="item in SESSION_ENTRY"
+            :key="item.value"
+            :label="t(item.labelKey)"
+            :value="item.value"
+          />
         </el-select>
         <el-date-picker
           v-model="range"
           type="datetimerange"
-          range-separator="至"
-          start-placeholder="开始时间"
-          end-placeholder="结束时间"
+          :range-separator="t('common.to')"
+          :start-placeholder="t('common.startTime')"
+          :end-placeholder="t('common.endTime')"
         />
-        <el-button type="primary" @click="load(1)">查询</el-button>
-        <el-button @click="reset">重置</el-button>
+        <el-button type="primary" @click="load(1)">{{ t('common.search') }}</el-button>
+        <el-button @click="reset">{{ t('common.reset') }}</el-button>
         <span class="grow" />
-        <el-button v-perm="'logins:export'" @click="onExport">导出</el-button>
+        <el-button v-perm="'logins:export'" @click="onExport">{{ t('common.export') }}</el-button>
       </div>
-      <div class="table-hint">登录日志只读保留历史，不提供操作入口，也不反映当前是否在线。</div>
+      <div class="table-hint">{{ t('loginLog.readonlyTip') }}</div>
 
       <el-table :data="page.list" v-loading="loading" border>
-        <el-table-column prop="account" label="账号" min-width="140" />
-        <el-table-column prop="entryLabel" label="入口" width="120" />
-        <el-table-column label="结果" width="100">
+        <el-table-column prop="account" :label="t('loginLog.account')" min-width="140" />
+        <el-table-column prop="entryLabel" :label="t('loginLog.entry')" width="120" />
+        <el-table-column :label="t('loginLog.result')" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.result === 'SUCCESS' ? 'success' : 'danger'">{{ row.resultLabel }}</el-tag>
+            <el-tag :type="row.result === 'SUCCESS' ? 'success' : 'danger'">
+              {{ row.resultLabel }}
+            </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="失败原因" min-width="140">
-          <template #default="{ row }">{{ row.failReason || '—' }}</template>
+        <el-table-column :label="t('loginLog.failReason')" min-width="140">
+          <template #default="{ row }">{{ row.failReason || t('common.dash') }}</template>
         </el-table-column>
-        <el-table-column prop="clientIp" label="IP" width="140" />
-        <el-table-column prop="userAgent" label="浏览器／系统" min-width="200" show-overflow-tooltip />
-        <el-table-column label="登录时间" width="180">
+        <el-table-column prop="clientIp" :label="t('loginLog.clientIp')" width="140" />
+        <el-table-column
+          prop="userAgent"
+          :label="t('loginLog.userAgent')"
+          min-width="200"
+          show-overflow-tooltip
+        />
+        <el-table-column :label="t('loginLog.loginTime')" width="180">
           <template #default="{ row }">{{ formatDateTime(row.loginTime) }}</template>
         </el-table-column>
       </el-table>
@@ -55,11 +87,13 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { LOGIN_RESULT, SESSION_ENTRY } from '@/stores/dict'
 import { exportLoginLogs, pageLoginLogs, type LoginLogQuery } from '@/api/log'
 import type { LoginLogItem } from '@/api/types'
 import { formatDateTime, toUtcIso } from '@/utils/datetime'
 
+const { t } = useI18n()
 const loading = ref(false)
 const range = ref<[Date, Date] | null>(null)
 const page = reactive({ total: 0, list: [] as LoginLogItem[] })

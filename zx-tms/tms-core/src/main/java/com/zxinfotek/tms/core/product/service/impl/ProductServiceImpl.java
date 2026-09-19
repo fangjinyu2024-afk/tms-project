@@ -1,12 +1,12 @@
 package com.zxinfotek.tms.core.product.service.impl;
 
-import com.alibaba.excel.annotation.ExcelProperty;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zxinfotek.tms.common.exception.BizException;
 import com.zxinfotek.tms.common.exception.NotFoundException;
 import com.zxinfotek.tms.common.model.PageResult;
+import com.zxinfotek.tms.common.util.UtcTimes;
 import com.zxinfotek.tms.core.product.ProductErrorCode;
 import com.zxinfotek.tms.core.product.api.ModelReferenceProvider;
 import com.zxinfotek.tms.core.product.api.ProductService;
@@ -22,11 +22,10 @@ import com.zxinfotek.tms.core.product.mapper.ProductModelMapper;
 import com.zxinfotek.tms.core.product.mapper.TenantModelMapper;
 import com.zxinfotek.tms.infra.context.RequestContextHolder;
 import com.zxinfotek.tms.infra.excel.ExcelExportService;
-import lombok.Data;
+import com.zxinfotek.tms.infra.i18n.I18nMessages;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -125,18 +124,19 @@ public class ProductServiceImpl implements ProductService {
         Map<Long, List<ProductModelEntity>> models = modelsOf(products.stream()
                 .map(ProductEntity::getId).collect(Collectors.toList())).stream()
                 .collect(Collectors.groupingBy(ProductModelEntity::getProductId));
-        List<ProductExportRow> rows = products.stream().map(product -> {
-            ProductExportRow row = new ProductExportRow();
-            row.setCategory(product.getCategory() == null ? "" : product.getCategory().getLabel());
-            row.setName(product.getName());
-            row.setModels(models.getOrDefault(product.getId(), List.of()).stream()
-                    .map(ProductModelEntity::getModel).collect(Collectors.joining("、")));
-            row.setDescription(product.getDescription());
-            row.setCreateTime(product.getCreateTime());
-            return row;
-        }).collect(Collectors.toList());
+        String separator = I18nMessages.get("msg.common.separator");
+        List<List<Object>> rows = products.stream().map(product -> List.<Object>of(
+                text(I18nMessages.label(product.getCategory())),
+                text(product.getName()),
+                models.getOrDefault(product.getId(), List.of()).stream()
+                        .map(ProductModelEntity::getModel).collect(Collectors.joining(separator)),
+                text(product.getDescription()),
+                UtcTimes.formatCompact(product.getCreateTime()))).collect(Collectors.toList());
         return excelExportService.export("product", RequestContextHolder.get().getTenantId(),
-                "产品与型号", ProductExportRow.class, rows);
+                "export.sheet.product",
+                List.of("export.column.productCategory", "export.column.productName", "export.column.models",
+                        "export.column.description", "export.column.createTime"),
+                rows);
     }
 
     /** 型号保存为全量覆盖：新增型号校验标识唯一，移除型号先校验引用。 */
@@ -154,10 +154,10 @@ public class ProductServiceImpl implements ProductService {
         for (ProductSaveRequest.ModelItem item : items) {
             String model = item.getModel() == null ? null : item.getModel().trim();
             if (model == null || model.isEmpty()) {
-                throw new BizException(ProductErrorCode.PRODUCT_001, "型号标识不能为空");
+                throw new BizException(ProductErrorCode.PRODUCT_001, "msg.product.modelRequired");
             }
             if (!seen.add(model)) {
-                throw new BizException(ProductErrorCode.PRODUCT_001, "型号标识重复：" + model);
+                throw new BizException(ProductErrorCode.PRODUCT_001, "msg.product.modelDuplicated", model);
             }
             assertModelUnique(model, item.getId());
             if (item.getId() == null) {
@@ -169,7 +169,7 @@ public class ProductServiceImpl implements ProductService {
             } else {
                 ProductModelEntity entity = productModelMapper.selectById(item.getId());
                 if (entity == null) {
-                    throw new NotFoundException("型号不存在");
+                    throw new NotFoundException("msg.product.modelNotFound");
                 }
                 entity.setModel(model);
                 productModelMapper.updateById(entity);
@@ -183,11 +183,11 @@ public class ProductServiceImpl implements ProductService {
         Long tenantBinding = tenantModelMapper.selectCount(Wrappers.<TenantModelEntity>lambdaQuery()
                 .eq(TenantModelEntity::getModelId, model.getId()));
         if (tenantBinding != null && tenantBinding > 0) {
-            blocking.add("客户授权 " + tenantBinding + " 个");
+            blocking.add(I18nMessages.get("msg.block.tenantModel", tenantBinding));
         }
         if (!blocking.isEmpty()) {
-            throw new BizException(ProductErrorCode.PRODUCT_002,
-                    "型号 " + model.getModel() + " 已被 " + String.join("、", blocking) + " 引用，不能移除");
+            throw new BizException(ProductErrorCode.PRODUCT_002, "msg.product.modelReferenced",
+                    model.getModel(), String.join(I18nMessages.get("msg.common.separator"), blocking));
         }
     }
 
@@ -199,7 +199,7 @@ public class ProductServiceImpl implements ProductService {
         }
         Long exists = productModelMapper.selectCount(wrapper);
         if (exists != null && exists > 0) {
-            throw new BizException(ProductErrorCode.PRODUCT_001, "型号标识已存在：" + model);
+            throw new BizException(ProductErrorCode.PRODUCT_001, "msg.product.modelExists", model);
         }
     }
 
@@ -211,7 +211,7 @@ public class ProductServiceImpl implements ProductService {
         }
         Long exists = productMapper.selectCount(wrapper);
         if (exists != null && exists > 0) {
-            throw new BizException(ProductErrorCode.PRODUCT_001, "产品名称已存在");
+            throw new BizException(ProductErrorCode.PRODUCT_001, "msg.product.nameExists");
         }
     }
 
@@ -258,7 +258,7 @@ public class ProductServiceImpl implements ProductService {
         ProductVO vo = new ProductVO();
         vo.setId(product.getId());
         vo.setCategory(product.getCategory() == null ? null : product.getCategory().getCode());
-        vo.setCategoryLabel(product.getCategory() == null ? null : product.getCategory().getLabel());
+        vo.setCategoryLabel(I18nMessages.label(product.getCategory()));
         vo.setName(product.getName());
         vo.setImagePath(product.getImagePath());
         vo.setDescription(product.getDescription());
@@ -266,25 +266,16 @@ public class ProductServiceImpl implements ProductService {
         return vo;
     }
 
+    private static String text(String value) {
+        return value == null ? "" : value;
+    }
+
     private ProductEntity requireProduct(Long id) {
         ProductEntity product = productMapper.selectById(id);
         if (product == null) {
-            throw new NotFoundException("产品不存在");
+            throw new NotFoundException("msg.product.notFound");
         }
         return product;
     }
 
-    @Data
-    public static class ProductExportRow {
-        @ExcelProperty("产品类别")
-        private String category;
-        @ExcelProperty("产品名称")
-        private String name;
-        @ExcelProperty("型号")
-        private String models;
-        @ExcelProperty("描述")
-        private String description;
-        @ExcelProperty("创建时间")
-        private LocalDateTime createTime;
-    }
 }

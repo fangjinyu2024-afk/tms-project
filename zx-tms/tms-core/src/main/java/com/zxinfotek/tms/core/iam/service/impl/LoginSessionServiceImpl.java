@@ -1,6 +1,5 @@
 package com.zxinfotek.tms.core.iam.service.impl;
 
-import com.alibaba.excel.annotation.ExcelProperty;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -27,9 +26,9 @@ import com.zxinfotek.tms.infra.context.DataScopeAssert;
 import com.zxinfotek.tms.infra.context.RequestContext;
 import com.zxinfotek.tms.infra.context.RequestContextHolder;
 import com.zxinfotek.tms.infra.excel.ExcelExportService;
+import com.zxinfotek.tms.infra.i18n.I18nMessages;
 import com.zxinfotek.tms.infra.redis.RedisService;
 import com.zxinfotek.tms.infra.security.TokenHasher;
-import lombok.Data;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -212,7 +211,7 @@ public class LoginSessionServiceImpl implements LoginSessionService {
     public void forceLogout(Long sessionId, ForceLogoutRequest request) {
         LoginSessionEntity session = loginSessionMapper.selectById(sessionId);
         if (session == null) {
-            throw new NotFoundException("会话不存在");
+            throw new NotFoundException("msg.session.notFound");
         }
         RequestContext context = RequestContextHolder.get();
         if (sessionId.equals(context.getSessionId())) {
@@ -230,20 +229,21 @@ public class LoginSessionServiceImpl implements LoginSessionService {
     public String export(SessionQuery query) {
         List<LoginSessionEntity> sessions = loginSessionMapper
                 .selectSessionPage(new Page<>(1, 10000), buildWrapper(query)).getRecords();
-        List<SessionExportRow> rows = sessions.stream().map(session -> {
-            SessionExportRow row = new SessionExportRow();
-            row.setAccount(session.getAccount());
-            row.setNickname(session.getNickname());
-            row.setOrgName(orgName(session.getOrgId()));
-            row.setEntry(session.getEntry() == null ? "" : session.getEntry().getLabel());
-            row.setClientIp(session.getClientIp());
-            row.setUserAgent(session.getUserAgent());
-            row.setLoginTime(session.getLoginTime());
-            row.setLastActiveTime(session.getLastActiveTime());
-            return row;
-        }).collect(Collectors.toList());
+        List<List<Object>> rows = sessions.stream().map(session -> List.<Object>of(
+                text(session.getAccount()),
+                text(session.getNickname()),
+                text(orgName(session.getOrgId())),
+                text(I18nMessages.label(session.getEntry())),
+                text(session.getClientIp()),
+                text(session.getUserAgent()),
+                UtcTimes.formatCompact(session.getLoginTime()),
+                UtcTimes.formatCompact(session.getLastActiveTime()))).collect(Collectors.toList());
         return excelExportService.export("session", RequestContextHolder.get().getTenantId(),
-                "在线会话", SessionExportRow.class, rows);
+                "export.sheet.session",
+                List.of("export.column.account", "export.column.nickname", "export.column.orgName",
+                        "export.column.entry", "export.column.clientIp", "export.column.userAgent",
+                        "export.column.loginTime", "export.column.lastActiveTime"),
+                rows);
     }
 
     @Override
@@ -308,7 +308,7 @@ public class LoginSessionServiceImpl implements LoginSessionService {
         vo.setOrgId(entity.getOrgId());
         vo.setOrgName(orgName(entity.getOrgId()));
         vo.setEntry(entity.getEntry() == null ? null : entity.getEntry().getCode());
-        vo.setEntryLabel(entity.getEntry() == null ? null : entity.getEntry().getLabel());
+        vo.setEntryLabel(I18nMessages.label(entity.getEntry()));
         vo.setClientIp(entity.getClientIp());
         vo.setUserAgent(entity.getUserAgent());
         vo.setLoginTime(entity.getLoginTime());
@@ -317,28 +317,13 @@ public class LoginSessionServiceImpl implements LoginSessionService {
         return vo;
     }
 
+    private static String text(String value) {
+        return value == null ? "" : value;
+    }
+
     private String orgName(Long orgId) {
         OrgEntity org = orgMapper.selectById(orgId);
         return org == null ? null : org.getName();
     }
 
-    @Data
-    public static class SessionExportRow {
-        @ExcelProperty("账号")
-        private String account;
-        @ExcelProperty("姓名")
-        private String nickname;
-        @ExcelProperty("机构")
-        private String orgName;
-        @ExcelProperty("入口")
-        private String entry;
-        @ExcelProperty("IP")
-        private String clientIp;
-        @ExcelProperty("浏览器／客户端")
-        private String userAgent;
-        @ExcelProperty("登录时间")
-        private LocalDateTime loginTime;
-        @ExcelProperty("最近活动时间")
-        private LocalDateTime lastActiveTime;
-    }
 }

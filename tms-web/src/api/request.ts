@@ -1,6 +1,7 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { ACCEPT_LANGUAGE, currentLocale, translate } from '@/i18n'
 import router from '@/router'
 
 /** 统一响应体，结构见详细设计 5.2 */
@@ -28,6 +29,7 @@ http.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  config.headers['Accept-Language'] = ACCEPT_LANGUAGE[currentLocale()]
   return config
 })
 
@@ -36,7 +38,7 @@ http.interceptors.response.use(
   (error) => {
     const status = error.response?.status
     const body = error.response?.data as Result<unknown> | undefined
-    const message = body?.message || '请求失败，请稍后重试'
+    const message = body?.message || translate('error.requestFailed')
     if (status === 401) {
       useUserStore().clear()
       void router.push({ name: 'login' })

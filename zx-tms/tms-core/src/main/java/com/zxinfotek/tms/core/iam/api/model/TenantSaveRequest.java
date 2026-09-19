@@ -9,26 +9,26 @@ import java.util.List;
 @Data
 public class TenantSaveRequest {
 
-    @NotBlank(message = "请输入客户名称")
-    @Size(max = 100, message = "客户名称最多 100 个字符")
+    @NotBlank(message = "msg.valid.tenantNameRequired")
+    @Size(max = 100, message = "msg.valid.tenantNameSize")
     private String name;
 
-    @Size(max = 50)
+    @Size(max = 50, message = "msg.valid.contactNameSize")
     private String contactName;
 
-    @Size(max = 30)
+    @Size(max = 30, message = "msg.valid.contactPhoneSize")
     private String contactPhone;
 
-    @Size(max = 50)
+    @Size(max = 50, message = "msg.valid.regionSize")
     private String country;
 
-    @Size(max = 50)
+    @Size(max = 50, message = "msg.valid.regionSize")
     private String province;
 
-    @Size(max = 50)
+    @Size(max = 50, message = "msg.valid.regionSize")
     private String city;
 
-    @Size(max = 500)
+    @Size(max = 500, message = "msg.valid.remarkSize")
     private String remark;
 
     /** 授权码发放渠道，取值见详细设计 6.3.9 */

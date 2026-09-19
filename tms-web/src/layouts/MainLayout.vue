@@ -1,34 +1,34 @@
 <template>
   <el-container class="layout">
-    <el-aside width="226px" class="sidebar">
+    <el-aside width="240px" class="sidebar">
       <div class="brand">
         <div class="brand-icon">T</div>
         <div>
-          <strong>TMS</strong>
-          <small>终端管理系统</small>
+          <strong>{{ t('app.name') }}</strong>
+          <small>{{ t('app.subtitle') }}</small>
         </div>
       </div>
       <el-menu :default-active="route.name as string" router class="menu">
-        <template v-for="group in menuGroups" :key="group.name">
-          <template v-if="group.name === '工作台'">
+        <template v-for="group in menuGroups" :key="group.key">
+          <template v-if="group.key === 'home'">
             <el-menu-item
               v-for="item in group.items"
               :key="item.name"
               :index="item.name"
               :route="{ name: item.name }"
             >
-              {{ item.title }}
+              {{ t(item.titleKey) }}
             </el-menu-item>
           </template>
-          <el-sub-menu v-else :index="group.name">
-            <template #title>{{ group.name }}</template>
+          <el-sub-menu v-else :index="group.key">
+            <template #title>{{ t(`menuGroup.${group.key}`) }}</template>
             <el-menu-item
               v-for="item in group.items"
               :key="item.name"
               :index="item.name"
               :route="{ name: item.name }"
             >
-              {{ item.title }}
+              {{ t(item.titleKey) }}
             </el-menu-item>
           </el-sub-menu>
         </template>
@@ -38,21 +38,29 @@
       <el-header class="header">
         <div class="crumb">
           <span class="org">{{ orgLabel }}</span>
-          <span class="title">{{ route.meta.title }}</span>
+          <span class="title">{{ route.meta.titleKey ? t(route.meta.titleKey as string) : '' }}</span>
         </div>
-        <el-dropdown @command="onCommand">
-          <span class="account">
-            {{ user.member?.nickname }}（{{ user.member?.account }}）
-            <el-icon><ArrowDown /></el-icon>
-          </span>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-              <el-dropdown-item command="password">修改密码</el-dropdown-item>
-              <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
+        <div class="header-right">
+          <LanguageSwitch />
+          <el-dropdown @command="onCommand">
+            <span class="account">
+              {{
+                t('common.parenthesized', {
+                  main: user.member?.nickname,
+                  sub: user.member?.account
+                })
+              }}
+              <el-icon><ArrowDown /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="profile">{{ t('menu.profile') }}</el-dropdown-item>
+                <el-dropdown-item command="password">{{ t('menu.changePassword') }}</el-dropdown-item>
+                <el-dropdown-item command="logout" divided>{{ t('layout.signOut') }}</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
       </el-header>
       <el-main class="main">
         <router-view />
@@ -64,16 +72,19 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { ArrowDown } from '@element-plus/icons-vue'
+import LanguageSwitch from '@/components/LanguageSwitch.vue'
 import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
 const router = useRouter()
 const user = useUserStore()
+const { t } = useI18n()
 
 interface MenuItem {
   name: string
-  title: string
+  titleKey: string
 }
 
 /** 平台租户与其根机构同名时只展示一次 */
@@ -98,12 +109,12 @@ const menuGroups = computed(() => {
       continue
     }
     const items = groups.get(group) ?? []
-    items.push({ name: String(record.name), title: String(record.meta.title) })
+    items.push({ name: String(record.name), titleKey: String(record.meta.titleKey) })
     groups.set(group, items)
   }
-  const order = ['工作台', '设备管理', '远程维护', '激活与证书', '系统管理']
-  return Array.from(groups, ([name, items]) => ({ name, items })).sort(
-    (a, b) => order.indexOf(a.name) - order.indexOf(b.name)
+  const order = ['home', 'device', 'maintain', 'activation', 'system']
+  return Array.from(groups, ([key, items]) => ({ key, items })).sort(
+    (a, b) => order.indexOf(a.key) - order.indexOf(b.key)
   )
 })
 
@@ -163,6 +174,12 @@ async function onCommand(command: string) {
   justify-content: space-between;
   background: #fff;
   border-bottom: 1px solid #e7ebf2;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 18px;
 }
 
 .crumb .org {

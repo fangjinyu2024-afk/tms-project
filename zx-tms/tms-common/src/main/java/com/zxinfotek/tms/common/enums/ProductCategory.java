@@ -1,7 +1,7 @@
 package com.zxinfotek.tms.common.enums;
 
 /** 产品类别，详细设计 6.2.9。 */
-public enum ProductCategory {
+public enum ProductCategory implements Labeled {
 
     TRADITIONAL_POS("传统 POS"),
     DESKTOP_POS("台式 POS");
@@ -12,10 +12,12 @@ public enum ProductCategory {
         this.label = label;
     }
 
+    @Override
     public String getCode() {
         return name();
     }
 
+    @Override
     public String getLabel() {
         return label;
     }

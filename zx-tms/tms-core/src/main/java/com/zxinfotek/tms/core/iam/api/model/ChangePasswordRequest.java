@@ -7,10 +7,10 @@ import lombok.Data;
 @Data
 public class ChangePasswordRequest {
 
-    @NotBlank(message = "请输入原密码")
+    @NotBlank(message = "msg.valid.oldPasswordRequired")
     private String oldPassword;
 
-    @NotBlank(message = "请输入新密码")
-    @Size(min = 8, max = 64, message = "新密码长度为 8 至 64 位")
+    @NotBlank(message = "msg.valid.newPasswordRequired")
+    @Size(min = 8, max = 64, message = "msg.valid.newPasswordLength")
     private String newPassword;
 }

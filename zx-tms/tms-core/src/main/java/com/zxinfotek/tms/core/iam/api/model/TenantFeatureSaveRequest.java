@@ -8,6 +8,6 @@ import java.util.List;
 @Data
 public class TenantFeatureSaveRequest {
 
-    @NotNull(message = "请选择开通的菜单")
+    @NotNull(message = "msg.valid.menuKeysRequired")
     private List<String> menuKeys;
 }

@@ -7,11 +7,11 @@ public class ConflictException extends BaseException {
         super(CommonErrorCode.COMMON_002);
     }
 
-    public ConflictException(String message) {
-        super(CommonErrorCode.COMMON_002, message);
+    public ConflictException(String messageKey, Object... messageArgs) {
+        super(CommonErrorCode.COMMON_002, messageKey, messageArgs);
     }
 
-    public ConflictException(ErrorCode errorCode, String message) {
-        super(errorCode, message);
+    public ConflictException(ErrorCode errorCode, String messageKey, Object... messageArgs) {
+        super(errorCode, messageKey, messageArgs);
     }
 }

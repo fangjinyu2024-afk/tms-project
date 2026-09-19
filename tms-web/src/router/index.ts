@@ -3,7 +3,7 @@ import { useUserStore } from '@/stores/user'
 import MainLayout from '@/layouts/MainLayout.vue'
 
 /**
- * 路由元数据绑定菜单键与权限码，菜单按有效权限渲染；
+ * 路由元数据绑定菜单键、分组键与权限码，菜单标题走 i18n，按有效权限渲染；
  * 业务模块（设备、远程维护、激活与证书）随对应章节的详细设计补充。
  */
 const routes: RouteRecordRaw[] = [
@@ -11,13 +11,13 @@ const routes: RouteRecordRaw[] = [
     path: '/login',
     name: 'login',
     component: () => import('@/views/LoginView.vue'),
-    meta: { public: true, title: '登录' }
+    meta: { public: true, titleKey: 'menu.login' }
   },
   {
     path: '/change-password',
     name: 'change-password',
     component: () => import('@/views/ChangePasswordView.vue'),
-    meta: { title: '修改密码' }
+    meta: { titleKey: 'menu.changePassword' }
   },
   {
     path: '/',
@@ -27,61 +27,61 @@ const routes: RouteRecordRaw[] = [
         path: '',
         name: 'home',
         component: () => import('@/views/HomeView.vue'),
-        meta: { title: '工作台', menuKey: 'home', group: '工作台', icon: 'HomeFilled' }
+        meta: { titleKey: 'menu.home', menuKey: 'home', group: 'home' }
       },
       {
         path: 'profile',
         name: 'profile',
         component: () => import('@/views/ProfileView.vue'),
-        meta: { title: '个人中心' }
+        meta: { titleKey: 'menu.profile' }
       },
       {
         path: 'system/customers',
         name: 'customers',
         component: () => import('@/views/system/CustomerListView.vue'),
-        meta: { title: '客户管理', menuKey: 'customers', group: '系统管理', permCode: 'customers:view' }
+        meta: { titleKey: 'menu.customers', menuKey: 'customers', group: 'system', permCode: 'customers:view' }
       },
       {
         path: 'system/orgs',
         name: 'orgs',
         component: () => import('@/views/system/OrgListView.vue'),
-        meta: { title: '机构管理', menuKey: 'orgs', group: '系统管理', permCode: 'orgs:view' }
+        meta: { titleKey: 'menu.orgs', menuKey: 'orgs', group: 'system', permCode: 'orgs:view' }
       },
       {
         path: 'system/members',
         name: 'members',
         component: () => import('@/views/system/MemberListView.vue'),
-        meta: { title: '成员管理', menuKey: 'members', group: '系统管理', permCode: 'members:view' }
+        meta: { titleKey: 'menu.members', menuKey: 'members', group: 'system', permCode: 'members:view' }
       },
       {
         path: 'system/roles',
         name: 'roles',
         component: () => import('@/views/system/RoleListView.vue'),
-        meta: { title: '角色管理', menuKey: 'roles', group: '系统管理', permCode: 'roles:view' }
+        meta: { titleKey: 'menu.roles', menuKey: 'roles', group: 'system', permCode: 'roles:view' }
       },
       {
         path: 'system/products',
         name: 'products',
         component: () => import('@/views/system/ProductListView.vue'),
-        meta: { title: '产品与型号', menuKey: 'products', group: '系统管理', permCode: 'products:view' }
+        meta: { titleKey: 'menu.products', menuKey: 'products', group: 'system', permCode: 'products:view' }
       },
       {
         path: 'system/oper-logs',
         name: 'logs',
         component: () => import('@/views/system/OperLogView.vue'),
-        meta: { title: '操作日志', menuKey: 'logs', group: '系统管理', permCode: 'logs:view' }
+        meta: { titleKey: 'menu.logs', menuKey: 'logs', group: 'system', permCode: 'logs:view' }
       },
       {
         path: 'system/login-logs',
         name: 'logins',
         component: () => import('@/views/system/LoginLogView.vue'),
-        meta: { title: '登录日志', menuKey: 'logins', group: '系统管理', permCode: 'logins:view' }
+        meta: { titleKey: 'menu.logins', menuKey: 'logins', group: 'system', permCode: 'logins:view' }
       },
       {
         path: 'system/sessions',
         name: 'sessions',
         component: () => import('@/views/system/SessionListView.vue'),
-        meta: { title: '在线会话', menuKey: 'sessions', group: '系统管理', permCode: 'sessions:view' }
+        meta: { titleKey: 'menu.sessions', menuKey: 'sessions', group: 'system', permCode: 'sessions:view' }
       }
     ]
   },

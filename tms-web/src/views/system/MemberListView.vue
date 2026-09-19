@@ -2,53 +2,83 @@
   <div class="page">
     <el-card>
       <div class="page-toolbar">
-        <el-input v-model="query.keyword" placeholder="账号或昵称" clearable style="width: 200px" />
-        <OrgTreeSelect v-model="query.orgId" placeholder="所属机构" />
-        <el-select v-model="query.status" placeholder="状态" clearable style="width: 140px">
-          <el-option v-for="item in ENABLE_STATUS" :key="item.value" :label="item.label" :value="item.value" />
+        <el-input
+          v-model="query.keyword"
+          :placeholder="t('member.keywordPlaceholder')"
+          clearable
+          style="width: 200px"
+        />
+        <OrgTreeSelect v-model="query.orgId" :placeholder="t('member.orgPlaceholder')" />
+        <el-select
+          v-model="query.status"
+          :placeholder="t('common.status')"
+          clearable
+          style="width: 140px"
+        >
+          <el-option
+            v-for="item in ENABLE_STATUS"
+            :key="item.value"
+            :label="t(item.labelKey)"
+            :value="item.value"
+          />
         </el-select>
-        <el-button type="primary" @click="load(1)">查询</el-button>
-        <el-button @click="reset">重置</el-button>
+        <el-button type="primary" @click="load(1)">{{ t('common.search') }}</el-button>
+        <el-button @click="reset">{{ t('common.reset') }}</el-button>
         <span class="grow" />
-        <el-button v-perm="'members:create'" type="primary" @click="openCreate">新增成员</el-button>
-        <el-button v-perm="'members:export'" @click="onExport">导出</el-button>
+        <el-button v-perm="'members:create'" type="primary" @click="openCreate">
+          {{ t('member.createTitle') }}
+        </el-button>
+        <el-button v-perm="'members:export'" @click="onExport">{{ t('common.export') }}</el-button>
       </div>
 
       <el-table :data="page.list" v-loading="loading" border>
-        <el-table-column prop="account" label="登录账号" min-width="140" />
-        <el-table-column prop="nickname" label="昵称" min-width="120" />
-        <el-table-column prop="orgName" label="所属机构" min-width="140" />
-        <el-table-column label="角色" min-width="200">
+        <el-table-column prop="account" :label="t('member.account')" min-width="140" />
+        <el-table-column prop="nickname" :label="t('member.nickname')" min-width="120" />
+        <el-table-column prop="orgName" :label="t('member.org')" min-width="140" />
+        <el-table-column :label="t('member.roles')" min-width="200">
           <template #default="{ row }">
             <el-tag v-for="role in row.roles" :key="role.id" class="role-tag" size="small">
               {{ role.name }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="email" label="邮箱" min-width="180">
+        <el-table-column prop="email" :label="t('member.email')" min-width="180">
           <template #default="{ row }">
-            <span>{{ row.email || '—' }}</span>
-            <el-tag v-if="row.email" size="small" :type="row.emailVerified ? 'success' : 'info'" class="role-tag">
-              {{ row.emailVerified ? '已验证' : '未验证' }}
+            <span>{{ row.email || t('common.dash') }}</span>
+            <el-tag
+              v-if="row.email"
+              size="small"
+              :type="row.emailVerified ? 'success' : 'info'"
+              class="role-tag"
+            >
+              {{ row.emailVerified ? t('member.verified') : t('member.unverified') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="90">
+        <el-table-column :label="t('common.status')" width="90">
           <template #default="{ row }">
             <el-tag :type="row.status === 'ENABLED' ? 'success' : 'info'">
-              {{ row.status === 'ENABLED' ? '启用' : '停用' }}
+              {{ t(`enums.enableStatus.${row.status}`) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="300" fixed="right">
+        <el-table-column :label="t('common.action')" width="300" fixed="right">
           <template #default="{ row }">
-            <el-button v-perm="'members:edit'" link type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button v-perm="'members:assign'" link type="primary" @click="openAssign(row)">分配角色</el-button>
-            <el-button v-perm="'members:reset'" link type="primary" @click="onReset(row)">重置密码</el-button>
-            <el-button v-perm="'members:toggle'" link type="primary" @click="onToggle(row)">
-              {{ row.status === 'ENABLED' ? '停用' : '启用' }}
+            <el-button v-perm="'members:edit'" link type="primary" @click="openEdit(row)">
+              {{ t('common.edit') }}
             </el-button>
-            <el-button v-perm="'members:delete'" link type="danger" @click="onDelete(row)">删除</el-button>
+            <el-button v-perm="'members:assign'" link type="primary" @click="openAssign(row)">
+              {{ t('member.assignRoles') }}
+            </el-button>
+            <el-button v-perm="'members:reset'" link type="primary" @click="onReset(row)">
+              {{ t('member.resetPassword') }}
+            </el-button>
+            <el-button v-perm="'members:toggle'" link type="primary" @click="onToggle(row)">
+              {{ row.status === 'ENABLED' ? t('common.disable') : t('common.enable') }}
+            </el-button>
+            <el-button v-perm="'members:delete'" link type="danger" @click="onDelete(row)">
+              {{ t('common.delete') }}
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -63,24 +93,28 @@
       />
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="editing ? '编辑成员' : '新增成员'" width="560px">
+    <el-dialog
+      v-model="dialogVisible"
+      :title="editing ? t('member.editTitle') : t('member.createTitle')"
+      width="560px"
+    >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
-        <el-form-item v-if="!editing" label="所属机构" prop="orgId">
+        <el-form-item v-if="!editing" :label="t('member.org')" prop="orgId">
           <OrgTreeSelect v-model="form.orgId" only-enabled />
         </el-form-item>
-        <el-form-item v-if="!editing" label="登录账号" prop="account">
-          <el-input v-model="form.account" placeholder="创建后不可更改" />
+        <el-form-item v-if="!editing" :label="t('member.account')" prop="account">
+          <el-input v-model="form.account" :placeholder="t('member.accountPlaceholder')" />
         </el-form-item>
-        <el-form-item label="昵称" prop="nickname">
+        <el-form-item :label="t('member.nickname')" prop="nickname">
           <el-input v-model="form.nickname" />
         </el-form-item>
-        <el-form-item label="邮箱">
-          <el-input v-model="form.email" placeholder="选填，用于通知与自助找回密码" />
+        <el-form-item :label="t('member.email')">
+          <el-input v-model="form.email" :placeholder="t('member.emailPlaceholder')" />
         </el-form-item>
-        <el-form-item label="联系电话">
+        <el-form-item :label="t('member.phone')">
           <el-input v-model="form.phone" />
         </el-form-item>
-        <el-form-item label="角色" prop="roleIds">
+        <el-form-item :label="t('member.roles')" prop="roleIds">
           <el-select v-model="form.roleIds" multiple style="width: 100%">
             <el-option
               v-for="role in roleOptions"
@@ -91,15 +125,15 @@
             />
           </el-select>
         </el-form-item>
-        <p class="form-tip">初始密码由系统生成并在保存后显示一次，成员首次登录必须修改。</p>
+        <p class="form-tip">{{ t('member.initialPasswordTip') }}</p>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="submit">保存</el-button>
+        <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" :loading="saving" @click="submit">{{ t('common.save') }}</el-button>
       </template>
     </el-dialog>
 
-    <el-dialog v-model="assignVisible" title="分配角色" width="480px">
+    <el-dialog v-model="assignVisible" :title="t('member.assignRoles')" width="480px">
       <el-select v-model="assignRoleIds" multiple style="width: 100%">
         <el-option
           v-for="role in roleOptions"
@@ -109,10 +143,10 @@
           :disabled="role.assignable === false"
         />
       </el-select>
-      <p class="form-tip">不能增减无权分配的角色；成员已有的更高权限角色保持只读。</p>
+      <p class="form-tip">{{ t('member.assignTip') }}</p>
       <template #footer>
-        <el-button @click="assignVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitAssign">保存</el-button>
+        <el-button @click="assignVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="submitAssign">{{ t('common.save') }}</el-button>
       </template>
     </el-dialog>
 
@@ -126,7 +160,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import OrgTreeSelect from '@/components/OrgTreeSelect.vue'
 import InitialPasswordDialog from '@/components/InitialPasswordDialog.vue'
@@ -145,6 +180,7 @@ import {
 } from '@/api/member'
 import type { Id, MemberItem, RoleOption } from '@/api/types'
 
+const { t } = useI18n()
 const loading = ref(false)
 const saving = ref(false)
 const dialogVisible = ref(false)
@@ -174,12 +210,12 @@ const form = reactive({
   roleIds: [] as Id[]
 })
 
-const rules: FormRules = {
-  orgId: [{ required: true, message: '请选择所属机构', trigger: 'change' }],
-  account: [{ required: true, message: '请输入登录账号', trigger: 'blur' }],
-  nickname: [{ required: true, message: '请输入昵称', trigger: 'blur' }],
-  roleIds: [{ required: true, message: '请至少选择一个角色', trigger: 'change' }]
-}
+const rules = computed<FormRules>(() => ({
+  orgId: [{ required: true, message: t('member.orgRequired'), trigger: 'change' }],
+  account: [{ required: true, message: t('member.accountRequired'), trigger: 'blur' }],
+  nickname: [{ required: true, message: t('member.nicknameRequired'), trigger: 'blur' }],
+  roleIds: [{ required: true, message: t('member.rolesRequired'), trigger: 'change' }]
+}))
 
 watch(
   () => form.orgId,
@@ -254,7 +290,7 @@ async function submit() {
         phone: form.phone,
         roleIds: form.roleIds
       })
-      ElMessage.success('成员已保存')
+      ElMessage.success(t('common.saved'))
     } else {
       const result = await createMember({ ...form })
       created.account = result.account ?? ''
@@ -274,12 +310,15 @@ async function submitAssign() {
   }
   await assignRoles(assigning.value.id, assignRoleIds.value)
   assignVisible.value = false
-  ElMessage.success('角色已保存')
+  ElMessage.success(t('member.rolesSaved'))
   await load()
 }
 
 async function onReset(row: MemberItem) {
-  await ElMessageBox.confirm(`重置后该成员的登录会话将失效，确认重置「${row.account}」的密码？`, '重置密码')
+  await ElMessageBox.confirm(
+    t('member.resetConfirm', { account: row.account }),
+    t('member.resetPassword')
+  )
   const result = await resetMemberPassword(row.id)
   created.account = result.account ?? row.account
   created.password = result.initialPassword ?? ''
@@ -289,19 +328,21 @@ async function onReset(row: MemberItem) {
 async function onToggle(row: MemberItem) {
   const target = row.status === 'ENABLED' ? 'DISABLED' : 'ENABLED'
   if (target === 'DISABLED') {
-    await ElMessageBox.confirm('停用后该成员的登录会话将全部失效，是否继续？', '停用成员')
+    await ElMessageBox.confirm(t('member.disableConfirm'), t('member.disableTitle'))
   }
   await toggleMember(row.id, target)
-  ElMessage.success('状态已更新')
+  ElMessage.success(t('common.statusUpdated'))
   await load()
 }
 
 async function onDelete(row: MemberItem) {
-  await ElMessageBox.confirm(`确认删除成员「${row.account}」？历史操作归属会保留。`, '删除成员', {
-    type: 'warning'
-  })
+  await ElMessageBox.confirm(
+    t('member.deleteConfirm', { account: row.account }),
+    t('member.deleteTitle'),
+    { type: 'warning' }
+  )
   await deleteMember(row.id)
-  ElMessage.success('成员已删除')
+  ElMessage.success(t('common.deleted'))
   await load()
 }
 

@@ -7,11 +7,11 @@ public class NotFoundException extends BaseException {
         super(CommonErrorCode.COMMON_003);
     }
 
-    public NotFoundException(String message) {
-        super(CommonErrorCode.COMMON_003, message);
+    public NotFoundException(String messageKey, Object... messageArgs) {
+        super(CommonErrorCode.COMMON_003, messageKey, messageArgs);
     }
 
-    public NotFoundException(ErrorCode errorCode, String message) {
-        super(errorCode, message);
+    public NotFoundException(ErrorCode errorCode, String messageKey, Object... messageArgs) {
+        super(errorCode, messageKey, messageArgs);
     }
 }

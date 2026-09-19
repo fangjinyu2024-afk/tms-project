@@ -5,11 +5,13 @@ import com.zxinfotek.tms.core.audit.api.ApiAccessLogService;
 import com.zxinfotek.tms.core.audit.api.model.ApiAccessLogRecord;
 import com.zxinfotek.tms.infra.context.RequestContext;
 import com.zxinfotek.tms.infra.context.RequestContextHolder;
+import com.zxinfotek.tms.infra.i18n.TmsLocaleResolver;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.MDC;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -44,6 +46,7 @@ public class TraceFilter extends OncePerRequestFilter {
         context.setClientIp(clientIp(request));
         context.setUserAgent(truncate(request.getHeader("User-Agent")));
         RequestContextHolder.set(context);
+        LocaleContextHolder.setLocale(TmsLocaleResolver.resolveEarly(request));
         MDC.put("traceId", traceId);
         response.setHeader(TRACE_HEADER, traceId);
         try {
@@ -51,6 +54,7 @@ public class TraceFilter extends OncePerRequestFilter {
         } finally {
             writeAccessLog(request, response, context, (int) (System.currentTimeMillis() - start));
             RequestContextHolder.clear();
+            LocaleContextHolder.resetLocaleContext();
             MDC.remove("traceId");
         }
     }
