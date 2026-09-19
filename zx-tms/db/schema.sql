@@ -1,6 +1,8 @@
 -- TMS 终端管理系统 数据库初始化脚本（基座部分）
 -- 表结构与索引以 docs/TMS-详细设计.md 第 4 章为准；设备、任务、升级包、密钥、激活、证书等表随对应模块补充。
 -- 约定：InnoDB / utf8mb4；主键雪花算法由应用生成；时间字段 DATETIME(3) 统一存 UTC；不建物理外键。
+-- 逻辑删除：主数据表的 `deleted` 仍为 0/1 标记，业务唯一索引改用生成列 `delete_key`
+-- （未删除为 0，已删除为主键），同名记录可以反复删除重建而不会撞唯一键。
 
 SET NAMES utf8mb4;
 
@@ -28,8 +30,9 @@ CREATE TABLE IF NOT EXISTS `t_tenant` (
   `update_by`         BIGINT UNSIGNED DEFAULT NULL,
   `update_by_name`    VARCHAR(50)     DEFAULT NULL,
   `update_time`       DATETIME(3)     DEFAULT NULL,
+  `delete_key`      BIGINT UNSIGNED GENERATED ALWAYS AS (IF(`deleted` = 0, 0, `id`)) STORED COMMENT '逻辑删除唯一键：未删除为 0，已删除为主键，供业务唯一索引使用',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_name` (`name`, `deleted`)
+  UNIQUE KEY `uk_name` (`name`, `delete_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='客户（租户）表';
 
 -- 2. 客户功能授权表
@@ -60,8 +63,9 @@ CREATE TABLE IF NOT EXISTS `t_org` (
   `update_by`      BIGINT UNSIGNED DEFAULT NULL,
   `update_by_name` VARCHAR(50)     DEFAULT NULL,
   `update_time`    DATETIME(3)     DEFAULT NULL,
+  `delete_key`      BIGINT UNSIGNED GENERATED ALWAYS AS (IF(`deleted` = 0, 0, `id`)) STORED COMMENT '逻辑删除唯一键：未删除为 0，已删除为主键，供业务唯一索引使用',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_parent_name` (`parent_id`, `name`, `deleted`),
+  UNIQUE KEY `uk_parent_name` (`parent_id`, `name`, `delete_key`),
   KEY `idx_tenant_path` (`tenant_id`, `org_path`),
   KEY `idx_parent` (`parent_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='机构表';
@@ -92,9 +96,10 @@ CREATE TABLE IF NOT EXISTS `t_member` (
   `update_by`             BIGINT UNSIGNED DEFAULT NULL,
   `update_by_name`        VARCHAR(50)     DEFAULT NULL,
   `update_time`           DATETIME(3)     DEFAULT NULL,
+  `delete_key`      BIGINT UNSIGNED GENERATED ALWAYS AS (IF(`deleted` = 0, 0, `id`)) STORED COMMENT '逻辑删除唯一键：未删除为 0，已删除为主键，供业务唯一索引使用',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_account` (`account_lower`, `deleted`),
-  UNIQUE KEY `uk_email` (`email`, `deleted`),
+  UNIQUE KEY `uk_account` (`account_lower`, `delete_key`),
+  UNIQUE KEY `uk_email` (`email`, `delete_key`),
   KEY `idx_tenant_org` (`tenant_id`, `org_path`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='成员表';
 
@@ -118,8 +123,9 @@ CREATE TABLE IF NOT EXISTS `t_role` (
   `update_by`      BIGINT UNSIGNED DEFAULT NULL,
   `update_by_name` VARCHAR(50)     DEFAULT NULL,
   `update_time`    DATETIME(3)     DEFAULT NULL,
+  `delete_key`      BIGINT UNSIGNED GENERATED ALWAYS AS (IF(`deleted` = 0, 0, `id`)) STORED COMMENT '逻辑删除唯一键：未删除为 0，已删除为主键，供业务唯一索引使用',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_org_name` (`owner_org_id`, `name`, `deleted`),
+  UNIQUE KEY `uk_org_name` (`owner_org_id`, `name`, `delete_key`),
   KEY `idx_tenant_path` (`tenant_id`, `owner_org_path`),
   KEY `idx_builtin` (`tenant_id`, `builtin_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='角色表';
@@ -268,8 +274,9 @@ CREATE TABLE IF NOT EXISTS `t_product` (
   `update_by`      BIGINT UNSIGNED DEFAULT NULL,
   `update_by_name` VARCHAR(50)     DEFAULT NULL,
   `update_time`    DATETIME(3)     DEFAULT NULL,
+  `delete_key`      BIGINT UNSIGNED GENERATED ALWAYS AS (IF(`deleted` = 0, 0, `id`)) STORED COMMENT '逻辑删除唯一键：未删除为 0，已删除为主键，供业务唯一索引使用',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_name` (`name`, `deleted`)
+  UNIQUE KEY `uk_name` (`name`, `delete_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='产品表';
 
 -- 14. 产品型号表
@@ -284,8 +291,9 @@ CREATE TABLE IF NOT EXISTS `t_product_model` (
   `update_by`      BIGINT UNSIGNED DEFAULT NULL,
   `update_by_name` VARCHAR(50)     DEFAULT NULL,
   `update_time`    DATETIME(3)     DEFAULT NULL,
+  `delete_key`      BIGINT UNSIGNED GENERATED ALWAYS AS (IF(`deleted` = 0, 0, `id`)) STORED COMMENT '逻辑删除唯一键：未删除为 0，已删除为主键，供业务唯一索引使用',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_model` (`model`, `deleted`),
+  UNIQUE KEY `uk_model` (`model`, `delete_key`),
   KEY `idx_product` (`product_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='产品型号表';
 
