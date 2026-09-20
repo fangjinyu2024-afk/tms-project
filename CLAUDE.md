@@ -34,7 +34,7 @@ TMS 终端管理系统：POS 终端交付后的集中管理平台，覆盖设备
 
 | 层次 | 技术 |
 |---|---|
-| 后端 | Java 17、Spring Boot 3.2、MyBatis-Plus 3.5、Netty 4.1、BouncyCastle 1.78、EasyExcel 3.3 |
+| 后端 | Java 17、Spring Boot 3.2、MyBatis-Plus 3.5、Netty 4.1、BouncyCastle 1.78、EasyExcel 3.3、easy-captcha 1.6.2 |
 | 数据 | MySQL 8.0（InnoDB / utf8mb4）、Redis 7、MinIO（S3 协议） |
 | 前端 | Vue 3、TypeScript、Vite、Element Plus、Pinia |
 | 构建 | Maven 3.9 |
