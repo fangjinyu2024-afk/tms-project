@@ -1,0 +1,34 @@
+/* 从 prototype/TMS-原型.html 移植，勿手工调整取值。
+   规则见 docs/TMS-前端复刻规范.md 第 2 章。 */
+
+:root{--blue:#1677ff;--blue-dark:#0958d9;--ink:#1f2c42;--muted:#66778d;--line:#e7ebf2;--bg:#f3f6fa;--nav:#fff;--green:#15865a;--red:#cc3943;--amber:#ad700b;font-family:Inter,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;color:var(--ink);font-size:14px}
+
+/* 尺度令牌：取值来自原型统计，见规范 2.2。页面只能引用这些变量，不得另写数值。 */
+:root{
+  --radius-control:5px;      /* 输入框、按钮 */
+  --radius-panel:8px;        /* 面板、分段控件 */
+  --radius-dialog:9px;       /* 弹窗 */
+  --radius-badge:4px;        /* 徽标、标签 */
+  --radius-icon:6px;         /* 图标底块 */
+
+  --font-table:12px;         /* 表格、说明 */
+  --font-label:11px;         /* 标签、辅助 */
+  --font-body:13px;          /* 按钮、正文 */
+  --font-metric:22px;        /* 统计数字 */
+
+  --pad-panel:20px;
+  --pad-panel-lg:22px;
+  --pad-table-top:14px 20px;
+  --pad-pagination:16px 20px;
+  --gap-sm:8px;
+  --gap-md:10px;
+  --gap-lg:12px;
+
+  --shadow-dialog:0 18px 60px #142b4322;
+  --shadow-float:0 4px 20px #233a551a;
+  --shadow-focus:0 0 0 2px #1677ff15;
+
+  --sidebar-width:226px;
+  --topbar-height:64px;
+  --brand-height:76px;
+}

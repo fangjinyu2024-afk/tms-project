@@ -1,0 +1,38 @@
+{
+  "_说明": "复刻期配置。legacy 列出尚未按 docs/TMS-前端复刻规范.md 复刻的文件，这些文件暂时豁免严格规则。复刻完一个页面，就把它从 legacy 里删掉——这一行删不掉说明页面没真正迁完。",
+
+  "legacy": [
+    "src/main.ts",
+    "src/api/request.ts",
+    "src/App.vue",
+    "src/layouts/MainLayout.vue",
+    "src/components/InitialPasswordDialog.vue",
+    "src/components/LanguageSwitch.vue",
+    "src/components/OrgTreeSelect.vue",
+    "src/components/PermissionMatrix.vue",
+    "src/views/ChangePasswordView.vue",
+    "src/views/HomeView.vue",
+    "src/views/LoginView.vue",
+    "src/views/ProfileView.vue",
+    "src/views/system/CustomerListView.vue",
+    "src/views/system/LoginLogView.vue",
+    "src/views/system/MemberListView.vue",
+    "src/views/system/OperLogView.vue",
+    "src/views/system/OrgListView.vue",
+    "src/views/system/ProductListView.vue",
+    "src/views/system/RoleListView.vue",
+    "src/views/system/SessionListView.vue"
+  ],
+
+  "_pages说明": "页面文件与契约键的对应。不在 legacy 里的页面，必须从 PAGE_CONTRACTS 取列与筛选项，且契约里的文案键必须中英文都有。新增页面时在这里登记。",
+
+  "pages": {
+    "src/views/system/CustomerListView.vue": "customers",
+    "src/views/system/OrgListView.vue": "orgs",
+    "src/views/system/MemberListView.vue": "members",
+    "src/views/system/RoleListView.vue": "roles",
+    "src/views/system/ProductListView.vue": "products",
+    "src/views/system/OperLogView.vue": "logs",
+    "src/views/system/LoginLogView.vue": "logins"
+  }
+}

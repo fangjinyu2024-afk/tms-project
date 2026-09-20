@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "contracts": "node scripts/extract-contracts.mjs",
+    "check": "vue-tsc --noEmit && node scripts/check.mjs"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",

@@ -1,0 +1,54 @@
+name: CI
+
+# 多人／多 AI 并行开发时，本地校验靠自觉；这里保证推上来的代码一定跑过。
+# 规则见 docs/TMS-前端复刻规范.md 与 CLAUDE.md。
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  backend:
+    name: 后端构建与测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: maven
+      - name: 编译并跑测试
+        working-directory: zx-tms
+        run: mvn -B test
+
+  frontend:
+    name: 前端类型检查、一致性校验与构建
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tms-web/package-lock.json
+      - name: 安装依赖
+        working-directory: tms-web
+        run: npm ci
+      - name: 一致性校验
+        working-directory: tms-web
+        run: npm run check
+      - name: 契约与原型是否同步
+        working-directory: tms-web
+        run: |
+          npm run contracts
+          if ! git diff --quiet -- src/contracts/pages.ts; then
+            echo "src/contracts/pages.ts 与 prototype/TMS-原型.html 不一致。"
+            echo "请跑 npm run contracts 重新生成后提交，不要手工编辑契约文件。"
+            git diff -- src/contracts/pages.ts
+            exit 1
+          fi
+      - name: 构建
+        working-directory: tms-web
+        run: npm run build
