@@ -69,6 +69,7 @@ td.maincell{font-weight:500;color:#24405f}
 .dialog.wide{width:970px}
 .dialog.narrow{width:500px}
 .dialog-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--line);font-size:17px;font-weight:600}
+.x{border:0;background:none;color:#7c899a;font-size:23px;line-height:1}
 .dialog-body{padding:22px 24px;overflow-y:auto;min-height:0}
 .dialog-foot{display:flex;justify-content:flex-end;gap:9px;padding:15px 24px;border-top:1px solid var(--line)}
 .drawer-overlay{justify-content:flex-end;padding:0}
@@ -240,3 +241,6 @@ td.maincell{color:#243b5d;font-weight:500}
 .org-layout>.tree{overflow:visible}
 .metrics.metrics-three{grid-template-columns:repeat(3,minmax(0,1fr))}
 .state-empty{color:#a3afc0}
+
+/* 以下为复刻新增：原型的 toast 只有成功态，失败提示需要红色变体。 */
+.toast.danger:before{content:"!";color:var(--red)}

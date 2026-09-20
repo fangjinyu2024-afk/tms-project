@@ -156,7 +156,34 @@ function stripComments(text) {
   }
 }
 
-const checks = ['i18n 键对齐', 'i18n 键存在', '硬编码色值', '硬编码文案', '页面契约', '组件库']
+// 7. 用到的样式类必须在设计系统里存在，杜绝自己发明类名
+{
+  const styleDir = resolve(SRC, 'styles')
+  const styleText = existsSync(styleDir)
+    ? readdirSync(styleDir).filter((f) => f.endsWith('.css'))
+        .map((f) => readFileSync(join(styleDir, f), 'utf8')).join('\n')
+    : ''
+  const known = new Set([...styleText.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]))
+  for (const f of vueFiles) {
+    if (legacy.has(rel(f))) continue
+    const text = readFileSync(f, 'utf8')
+    const template = text.match(/<template>([\s\S]*?)<\/template>/)?.[1] ?? ''
+    const scoped = new Set(
+      [...text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)]
+        .flatMap((m) => [...m[1].matchAll(/\.([a-zA-Z][\w-]*)/g)].map((x) => x[1]))
+    )
+    const used = new Set()
+    for (const m of template.matchAll(/(?<![:\w])class="([^"{}]*)"/g)) {
+      for (const c of m[1].split(/\s+/)) if (c) used.add(c)
+    }
+    const unknown = [...used].filter((c) => !known.has(c) && !scoped.has(c))
+    if (unknown.length) {
+      fail('样式类', `${rel(f)} 用到未定义的类 ${unknown.join(', ')}，只能用 src/styles/ 里的类或本文件 scoped 样式`)
+    }
+  }
+}
+
+const checks = ['i18n 键对齐', 'i18n 键存在', '硬编码色值', '硬编码文案', '页面契约', '组件库', '样式类']
 for (const name of checks) {
   const hit = failures.filter((f) => f.check === name)
   if (!hit.length) console.log(`  ✓ ${name}`)

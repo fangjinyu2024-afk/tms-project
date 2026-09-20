@@ -1,0 +1,172 @@
+/* 从 prototype/TMS-原型.html 移植，勿手工调整取值。
+   规则见 docs/TMS-前端复刻规范.md 第 2 章。 */
+
+@media(max-width:1100px){
+  .sidebar{width:192px}
+  .topbar{left:192px;padding:0 18px}
+  .brand{padding:16px}
+  .metrics{gap:10px}
+  .metric{padding:14px}
+  .org-layout{grid-template-columns:175px minmax(0,1fr)}
+}
+
+@media(max-width:780px){
+  .sidebar{transform:translateX(-100%);width:226px;box-shadow:8px 0 30px #223b4415}
+  .sidebar.open{transform:translateX(0)}
+  .topbar{left:0;padding:0 14px}
+  .crumb{display:none}
+  .top-right{gap:6px}
+  .role-select{max-width:170px}
+  .metrics{grid-template-columns:1fr 1fr}
+  .heading{flex-direction:column}
+  .org-layout{grid-template-columns:1fr}
+  .tree{max-height:180px;overflow:auto}
+  .form-grid,.kv-grid{grid-template-columns:1fr}
+  .overlay{padding:12px}
+  .dialog{max-height:calc(100vh - 24px)}
+  .drawer-overlay{padding:0}
+  .drawer{max-height:100vh}
+  .dialog-body{padding:18px}
+  .filterbar{padding:14px}
+  .dialog-foot{padding:14px}
+  .tabs{gap:16px;overflow:auto}
+  .avatar{display:none}
+}
+
+@media(min-width:1700px){
+  .stat-card{padding:21px 22px}
+}
+
+@media(max-width:1250px){
+  .stat-card{min-height:143px}
+  .global-search{width:190px}
+  .topbar{padding:0 24px}
+  .stat-foot{font-size:11px}
+}
+
+@media(max-width:1050px){
+  .sidebar{width:210px}
+  .topbar{left:210px}
+  .brand{padding:0 14px}
+  .brand strong{font-size:12px}
+  .brand small{font-size:8px}
+  .user-info small{max-width:125px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .global-search{width:170px}
+  .top-right{gap:12px}
+  .org-layout{grid-template-columns:180px minmax(0,1fr)}
+}
+
+@media(max-width:780px){
+  .sidebar{width:238px;transform:translateX(-100%);box-shadow:8px 0 40px #10214426}
+  .sidebar.open{transform:translateX(0)}
+  .topbar,.nav-collapsed .topbar{left:0;height:63px;padding:0 15px}
+  .top-left{gap:10px}
+  .crumb{display:flex;font-size:11px;max-width:150px;overflow:hidden}
+  .top-right{gap:8px}
+  .global-search,.user-info,.user-chevron{display:none}
+  .avatar{display:grid;width:31px;height:31px}
+  .stat-card{padding:16px;min-height:150px}
+  .stat-value{font-size:25px}
+  .stat-foot{font-size:10px;white-space:normal}
+  .section-head{gap:8px}
+  .section-head h2{font-size:14px}
+  .segmented{align-self:stretch}
+  .segmented button{flex:1}
+  .org-layout{grid-template-columns:1fr}
+  .form-grid,.kv-grid{grid-template-columns:1fr}
+  .heading{flex-direction:row;flex-wrap:wrap;align-items:center}
+  h1{font-size:21px}
+  .heading .actions{gap:7px}
+  .btn{padding:8px 11px}
+  .metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+  .metric{padding:16px}
+  .filterbar{padding:17px;gap:10px}
+  .filter-field input{width:190px}
+  .table-top{padding:16px}
+  .panel{border-radius:10px}
+  .dialog-body{padding:20px}
+  .dialog-head{padding:20px}
+  .dialog-foot{padding:16px 20px}
+  .user-menu{top:44px}
+  .nav-collapsed .sidebar{width:238px}
+  .nav-collapsed .brand>div,.nav-collapsed .nav-label,.nav-collapsed .nav-title,.nav-collapsed .nav-count{display:initial}
+  .nav-collapsed .nav button{justify-content:flex-start}
+  .nav-collapsed .brand{padding:0 20px}
+}
+
+@media(min-width:1920px){
+  :root{--sidebar-width:250px}
+  .nav button{font-size:14px;min-height:45px}
+  .topbar{height:80px}
+  .stat-card{padding:23px 26px;min-height:190px}
+  .stat-value{font-size:37px}
+  .table-wrap td{padding-top:20px;padding-bottom:20px}
+  .stat-label{font-size:14px}
+  .stat-foot{font-size:12px}
+  .section-head h2{font-size:16px}
+}
+
+@media(max-width:1390px){
+  .stat-card{min-height:157px}
+  .top-right{gap:10px}
+}
+
+@media(max-width:1100px){
+  :root{--sidebar-width:214px}
+  .brand{padding:0 12px}
+  .brand strong{font-size:13px}
+  .brand small{font-size:8px}
+  .global-search{display:none}
+  .user-info small{max-width:145px}
+  .section-head{flex-wrap:wrap}
+}
+
+@media(max-width:780px){
+  :root{--sidebar-width:232px}
+  .sidebar{transform:translateX(-100%);z-index:120}
+  .sidebar.open{transform:translateX(0)}
+  .topbar,.nav-collapsed .topbar{left:0;height:68px;padding:0 15px}
+  .top-right{gap:8px}
+  .user-info,.user-chevron{display:none}
+  .crumb{font-size:12px}
+  .top-left{gap:8px}
+  .icon-button{width:30px}
+  .stat-card{padding:17px;min-height:157px}
+  .stat-value{font-size:29px}
+  .stat-label{font-size:12px}
+  .stat-foot{font-size:10px}
+  .heading{align-items:flex-start;gap:14px;flex-wrap:wrap}
+  .filterbar{padding:19px;gap:12px}
+  .filter-field{flex:1;min-width:135px}
+  .filterbar input,.filterbar select{width:100%;min-width:0}
+  .table-wrap{padding:0 12px}
+  .table-wrap table{min-width:670px}
+  .dialog{max-width:calc(100vw - 24px)}
+  .dialog-body{padding:20px}
+  .dialog.drawer{max-width:100vw}
+  .nav-collapsed .sidebar{width:232px}
+  .nav-collapsed .nav-label,.nav-collapsed .nav-title,.nav-collapsed .brand>div,.nav-collapsed .sidebar-bottom{display:revert}
+  .nav-collapsed .nav button{justify-content:flex-start}
+  .nav-collapsed .brand{padding:0 19px;justify-content:flex-start}
+}
+
+@media(prefers-reduced-motion:reduce){
+  *{transition:none!important;scroll-behavior:auto!important}
+}
+
+@media(max-width:480px){
+  .locale-trigger{padding:0 4px;font-size:11px;gap:4px}
+  .locale-trigger svg{width:14px;height:14px}
+}
+
+@media(max-width:620px){
+  .dialog.inventory-dialog,.dialog.mode-dialog{max-width:calc(100vw - 18px)}
+}
+
+@media(max-width:700px){
+  .dialog.wide{width:calc(100vw - 24px)}
+}
+
+@media(max-width:700px){
+  .metrics.metrics-three{grid-template-columns:1fr}
+}

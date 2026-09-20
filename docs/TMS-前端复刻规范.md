@@ -50,11 +50,13 @@
 
 **禁止在页面里写死颜色、自造圆角与间距。** `.vue` 文件里出现十六进制色值会被 `npm run check` 判失败；需要新令牌时走第 8 章的公共改动流程。
 
-样式文件分四份，均由原型移植，勿手工调数值：`tokens.css`（令牌）、`base.css`（元素默认样式）、`layout.css`（侧栏顶栏外壳）、`components.css`（共享组件样式）。原型里页面专有的类族（`trend-*`、`device-*`、`home-*`、`login-*` 等）暂未移植，随各自页面复刻时搬进该页的 `<style scoped>`。
+样式文件分五份，均由原型移植，勿手工调数值：`tokens.css`（令牌）、`base.css`（元素默认样式）、`layout.css`（侧栏顶栏外壳）、`components.css`（共享组件样式）、`responsive.css`（上述部分的响应式规则）。原型里页面专有的类族（`trend-*`、`device-*`、`home-*`、`login-*` 等）暂未移植，随各自页面复刻时搬进该页的 `<style scoped>`。
 
 ## 3. 组件清单与契约
 
-不引入第三方组件库。原型自带完整一套，逐个封装为 Vue 组件，放 `tms-web/src/components/ui/`。左列是原型里的类名或辅助函数，是复刻时的比对基准。
+不引入第三方组件库。原型自带完整一套，逐个封装为 Vue 组件，放 `tms-web/src/components/ui/`。左列是原型里的类名或辅助函数，是复刻时的比对基准。**下表除最后两行外均已建成**，直接用即可。
+
+组件只能用 `src/styles/` 里已有的类或自己的 `<style scoped>`，用了不存在的类会被 `npm run check` 的「样式类」一项判失败。
 
 | 原型 | Vue 组件 | 契约要点 |
 |---|---|---|
@@ -68,15 +70,16 @@
 | `pagination(total)`，`.pagination` | `AppPagination.vue` | 左侧总数，右侧页码按钮 |
 | `layer(title, body, footer, cls)`，`.dialog` / `.dialog-head/body/foot` | `AppDialog.vue` | 默认宽 760px，`wide` 970px，`narrow` 变体；`max-height: calc(100vh - 64px)` |
 | `.drawer` / `.drawer-overlay` | `AppDrawer.vue` | 右侧滑出，遮罩右对齐 |
-| `toast(msg)`，`.toast` | `useToast.ts` | 顶部居中浮层，默认带 ✓ 前缀；失败态用 `danger` 变体 |
+| `toast(msg)`，`.toast` | `useToast.ts` + `AppToast.vue` | 顶部居中浮层，3.2 秒后消失；`success` 带 ✓、`danger` 带 !（原型只有成功态，红色变体是复刻新增） |
+| `icon(k)`，`icons{}` | `AppIcon.vue` | 13 个图标路径移植自原型，`name` 取值见组件内 `IconName` |
 | `badge(v)`，`.badge` + `green/red/blue/orange/purple` | `StatusBadge.vue` | **见下方注意事项** |
 | `.chip` / `.picked-chips` | `AppChip.vue` | 多值展示，如角色、关联型号 |
 | `.segmented` | `SegmentedControl.vue` | 工作台时间范围等切换 |
 | `.notice` / `.notice.warn` | `AppNotice.vue` | 页面顶部说明条 |
 | `.empty` / `.state-empty` | `AppEmpty.vue` | 空态，含图标与文字 |
 | `.form-grid` + `inputField(name, label, value, type, required, full, help)` | `AppForm.vue` + `AppField.vue` | 原型用原生 `reportValidity()` 校验；Vue 侧包一层轻量校验（必填、长度、邮箱），错误文案走 i18n |
-| `.tree` / `.tree-select` / `.tree-select-menu` | `OrgTreeSelect.vue` | 重写现有组件，去掉 `el-tree-select` |
-| `.picker-*` | `DevicePicker.vue` | 设备选择器，随详细设计 3.9 展开时再做 |
+| `.tree` / `.tree-select` / `.tree-select-menu` | `OrgTreeSelect.vue` | **未建成**，由第一个需要机构选择的页面（`orgs`／`members`／`sessions`）复刻时一并重写，去掉 `el-tree-select` |
+| `.picker-*` | `DevicePicker.vue` | **未建成**，设备选择器随详细设计 3.9 展开时再做 |
 
 **`StatusBadge` 的注意事项**：原型的 `badge()` 是用正则匹配**中文文案**决定颜色（`/成功|已激活|启用/` → green）。国际化之后英文文案匹配不上，这个做法不能照搬。Vue 侧按**枚举编码**映射颜色，取值以详细设计第 6 章为唯一来源，显示文案走 i18n 的 `enums.*` 键。这属于第 6 章登记的设计修正。
 
@@ -201,7 +204,7 @@
 | 层 | 机制 | 位置 |
 |---|---|---|
 | 唯一数据源 | 列与筛选项只有契约、颜色只有令牌、文案只有语言包、枚举只有 `stores/dict.ts`、权限码只有后端权限目录 | `src/contracts/pages.ts`、`src/styles/tokens.css` |
-| 自动校验 | `npm run check` 六项：类型检查、中英文键对齐、用到的键都存在、`.vue` 里无硬编码色值、`.vue` 里无硬编码中文、已复刻页面必须从契约取且不得引用 element-plus | `scripts/check.mjs` |
+| 自动校验 | `npm run check` 七项：类型检查、中英文键对齐、用到的键都存在、`.vue` 里无硬编码色值、`.vue` 里无硬编码中文、已复刻页面必须从契约取、不得引用 element-plus、不得使用设计系统里不存在的样式类 | `scripts/check.mjs` |
 | 持续集成 | push 与 PR 自动跑前后端全部校验，并校验契约与原型是否同步 | `.github/workflows/ci.yml` |
 
 `scripts/check.config.json` 的 `legacy` 列出尚未复刻的文件，暂时豁免严格规则。**复刻完一个页面就把它从 `legacy` 删掉**——删不掉说明没真正迁完。`pages` 段登记页面文件与契约键的对应，新增页面时补上。
