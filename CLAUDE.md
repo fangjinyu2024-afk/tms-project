@@ -22,6 +22,8 @@ TMS 终端管理系统：POS 终端交付后的集中管理平台，覆盖设备
 
 原型与功能清单冲突时，以功能清单中本轮确认的规则为准。协议 Markdown 与原始 Word 冲突时以原始文档为准，但 README 的「已确认结论」优先于两者。
 
+**例外——前端 UI**：页面布局、列与列序、筛选项、按钮文案与位置、交互形态、配色间距等，详细设计没有规定，由 `prototype/TMS-原型.html` 填空，规则见 `docs/TMS-前端复刻规范.md`。这不改变上面的优先级：原型的业务行为与文档冲突时仍以文档为准。
+
 **文档冲突处理规则**：
 
 - 发现文档之间冲突时，以**最新确认的需求**为准，不以文档的新旧或篇幅为准。
@@ -36,7 +38,7 @@ TMS 终端管理系统：POS 终端交付后的集中管理平台，覆盖设备
 |---|---|
 | 后端 | Java 17、Spring Boot 3.2、MyBatis-Plus 3.5、Netty 4.1、BouncyCastle 1.78、EasyExcel 3.3、easy-captcha 1.6.2 |
 | 数据 | MySQL 8.0（InnoDB / utf8mb4）、Redis 7、MinIO（S3 协议） |
-| 前端 | Vue 3、TypeScript、Vite、Element Plus、Pinia |
+| 前端 | Vue 3、TypeScript、Vite、Pinia。**不引入组件库**，UI 组件按原型自建，见 `docs/TMS-前端复刻规范.md`；Element Plus 正在逐页移除 |
 | 构建 | Maven 3.9 |
 | 坐标 | groupId `com.zxinfotek`，根包 `com.zxinfotek.tms` |
 
@@ -103,6 +105,15 @@ com.zxinfotek.tms.{module}
 - 不使用 `System.out`；日志用 SLF4J，异常必须带上下文，不写 `log.error(e.getMessage())` 这种丢堆栈的写法。
 - 时间类型统一 `Instant` 或 `LocalDateTime` + `ZoneOffset.UTC`，禁止依赖 JVM 默认时区。
 - **面向用户的文案一律走消息键。** 异常提示、枚举展示名、权限目录名称、导出表头、邮件内容都取自 `i18n/*.properties`；校验注解的 `message` 存的是消息键而不是文案。新增文案必须同时补中英文两份，键命名与边界见详细设计 7.13。代码里只允许保留解析失败时回落用的中文默认值（错误码枚举、权限目录常量），不允许在业务逻辑里拼接面向用户的文案。前端同理，文案放 `src/i18n/locales/`。
+
+## 前端页面
+
+详细规则见 `docs/TMS-前端复刻规范.md`，页面清单与复刻状态也在那里维护。红线四条：
+
+- **页面按 `prototype/TMS-原型.html` 复刻**，布局、列与列序、筛选项、按钮文案与位置、交互形态都以原型为准；业务规则、权限码、枚举取值、接口契约仍以功能清单与详细设计为准。
+- **不引入组件库**，UI 组件在 `tms-web/src/components/ui/` 按原型自建；样式只能引用 `src/styles/tokens.css` 的设计令牌，不得在页面里写死颜色、自造圆角与间距。
+- **所有可见文字走 i18n**，中英两份同时改，键一一对应。
+- **原型与文档或实际需求冲突时，登记到规范第 6 章并确认**，不在代码里静默处理，也不擅自改掉原型设计。
 
 ## 数据库约定
 
