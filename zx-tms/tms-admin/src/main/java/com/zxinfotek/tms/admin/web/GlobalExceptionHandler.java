@@ -10,6 +10,7 @@ import com.zxinfotek.tms.common.exception.PermissionException;
 import com.zxinfotek.tms.common.model.Result;
 import com.zxinfotek.tms.infra.context.RequestContextHolder;
 import com.zxinfotek.tms.infra.i18n.I18nMessages;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +23,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * 全局异常处理：统一包装为标准响应体，任何情况下不把堆栈、SQL 或内部路径返回给客户端（详细设计 7.4）。
@@ -87,6 +90,17 @@ public class GlobalExceptionHandler {
         log.warn("唯一约束冲突", e);
         return respond(HttpStatus.CONFLICT, CommonErrorCode.COMMON_002.getCode(),
                 I18nMessages.get("msg.web.duplicateKey"), null, response);
+    }
+
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
+    public ResponseEntity<Result<Object>> handleNoHandler(HttpServletRequest request,
+                                                          HttpServletResponse response) {
+        // 路径未匹配到任何处理器属于客户端错误，按 404 返回而不是落到兜底的系统内部错误（详细设计 7.4）
+        log.warn("请求路径不存在，method={}, path={}, traceId={}", request.getMethod(),
+                request.getRequestURI(), RequestContextHolder.get().getTraceId());
+        return respond(HttpStatus.NOT_FOUND, CommonErrorCode.COMMON_003.getCode(),
+                I18nMessages.getOrDefault("msg.web.pathNotFound",
+                        CommonErrorCode.COMMON_003.getMessage()), null, response);
     }
 
     @ExceptionHandler(Exception.class)
