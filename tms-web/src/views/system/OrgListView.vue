@@ -115,7 +115,7 @@
       :title="editing ? t('org.editTitle') : t('org.createTitle')"
       width="560px"
     >
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
+      <el-form ref="formRef" :model="form" :rules="rules" :validate-on-rule-change="false" label-width="110px">
         <el-form-item v-if="!editing" :label="t('org.parent')" prop="parentId">
           <OrgTreeSelect
             v-model="form.parentId"

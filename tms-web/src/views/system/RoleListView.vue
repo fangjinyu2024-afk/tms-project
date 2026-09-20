@@ -100,7 +100,7 @@
     </el-card>
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="900px" top="6vh">
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
+      <el-form ref="formRef" :model="form" :rules="rules" :validate-on-rule-change="false" label-width="110px">
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item :label="t('role.name')" prop="name">

@@ -88,7 +88,7 @@
       width="680px"
       top="6vh"
     >
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
+      <el-form ref="formRef" :model="form" :rules="rules" :validate-on-rule-change="false" label-width="110px">
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item :label="t('customer.name')" prop="name">

@@ -19,7 +19,7 @@
         </el-descriptions-item>
       </el-descriptions>
 
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="96px" class="form">
+      <el-form ref="formRef" :model="form" :rules="rules" :validate-on-rule-change="false" label-width="96px" class="form">
         <el-form-item :label="t('profile.nickname')" prop="nickname">
           <el-input v-model="form.nickname" />
         </el-form-item>

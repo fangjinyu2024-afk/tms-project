@@ -98,7 +98,7 @@
       :title="editing ? t('member.editTitle') : t('member.createTitle')"
       width="560px"
     >
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
+      <el-form ref="formRef" :model="form" :rules="rules" :validate-on-rule-change="false" label-width="110px">
         <el-form-item v-if="!editing" :label="t('member.org')" prop="orgId">
           <OrgTreeSelect v-model="form.orgId" only-enabled />
         </el-form-item>

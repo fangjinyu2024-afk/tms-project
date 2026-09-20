@@ -68,7 +68,7 @@
       :title="editing ? t('product.editTitle') : t('product.createTitle')"
       width="600px"
     >
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="96px">
+      <el-form ref="formRef" :model="form" :rules="rules" :validate-on-rule-change="false" label-width="96px">
         <el-form-item :label="t('product.category')" prop="category">
           <el-select v-model="form.category" style="width: 100%">
             <el-option

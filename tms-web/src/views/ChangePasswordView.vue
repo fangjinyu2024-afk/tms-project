@@ -3,7 +3,7 @@
     <el-card class="card">
       <h3>{{ user.mustChangePassword ? t('password.firstTitle') : t('password.title') }}</h3>
       <p class="form-tip">{{ t('password.tip') }}</p>
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="120px">
+      <el-form ref="formRef" :model="form" :rules="rules" :validate-on-rule-change="false" label-width="120px">
         <el-form-item :label="t('password.oldPassword')" prop="oldPassword">
           <el-input v-model="form.oldPassword" type="password" show-password />
         </el-form-item>
