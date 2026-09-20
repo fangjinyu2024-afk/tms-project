@@ -16,6 +16,7 @@ import com.zxinfotek.tms.core.iam.IamErrorCode;
 import com.zxinfotek.tms.core.iam.api.AuthService;
 import com.zxinfotek.tms.core.iam.api.LoginSessionService;
 import com.zxinfotek.tms.core.iam.api.PermissionService;
+import com.zxinfotek.tms.core.iam.api.model.CaptchaVO;
 import com.zxinfotek.tms.core.iam.api.model.ChangePasswordRequest;
 import com.zxinfotek.tms.core.iam.api.model.EmailVerifyRequest;
 import com.zxinfotek.tms.core.iam.api.model.ForgotPasswordRequest;
@@ -35,6 +36,7 @@ import com.zxinfotek.tms.core.iam.entity.TenantEntity;
 import com.zxinfotek.tms.core.iam.mapper.MemberMapper;
 import com.zxinfotek.tms.core.iam.mapper.OrgMapper;
 import com.zxinfotek.tms.core.iam.mapper.TenantMapper;
+import com.zxinfotek.tms.infra.captcha.CaptchaService;
 import com.zxinfotek.tms.infra.context.RequestContext;
 import com.zxinfotek.tms.infra.context.RequestContextHolder;
 import com.zxinfotek.tms.infra.i18n.I18nMessages;
@@ -79,6 +81,7 @@ public class AuthServiceImpl implements AuthService {
     private final SecurityProperties securityProperties;
     private final RedisService redisService;
     private final MailService mailService;
+    private final CaptchaService captchaService;
 
     public AuthServiceImpl(MemberMapper memberMapper,
                            OrgMapper orgMapper,
@@ -89,7 +92,8 @@ public class AuthServiceImpl implements AuthService {
                            PasswordEncoder passwordEncoder,
                            SecurityProperties securityProperties,
                            RedisService redisService,
-                           MailService mailService) {
+                           MailService mailService,
+                           CaptchaService captchaService) {
         this.memberMapper = memberMapper;
         this.orgMapper = orgMapper;
         this.tenantMapper = tenantMapper;
@@ -100,6 +104,16 @@ public class AuthServiceImpl implements AuthService {
         this.securityProperties = securityProperties;
         this.redisService = redisService;
         this.mailService = mailService;
+        this.captchaService = captchaService;
+    }
+
+    @Override
+    public CaptchaVO createCaptcha() {
+        CaptchaService.CaptchaImage image = captchaService.create();
+        CaptchaVO vo = new CaptchaVO();
+        vo.setCaptchaId(image.id());
+        vo.setImage(image.image());
+        return vo;
     }
 
     /**
@@ -110,6 +124,11 @@ public class AuthServiceImpl implements AuthService {
      */
     @Override
     public LoginVO login(LoginRequest request) {
+        // 验证码先于账号与密码校验，且失败不累加密码失败次数，避免被用来锁定他人账号（详细设计 3.1.5 第 13 条）
+        if (!captchaService.verify(request.getCaptchaId(), request.getCaptchaCode())) {
+            writeLoginLog(null, request, LoginResult.FAIL, "msg.login.captchaInvalid");
+            throw new BizException(IamErrorCode.AUTH_008);
+        }
         String accountLower = request.getAccount().trim().toLowerCase();
         MemberEntity member = memberMapper.selectOne(Wrappers.<MemberEntity>lambdaQuery()
                 .eq(MemberEntity::getAccountLower, accountLower).last("LIMIT 1"));
@@ -217,6 +236,9 @@ public class AuthServiceImpl implements AuthService {
     /** 找回密码仅对已验证邮箱的账号可用；无邮箱成员由有权限的管理员重置密码。 */
     @Override
     public void forgotPassword(ForgotPasswordRequest request) {
+        if (!captchaService.verify(request.getCaptchaId(), request.getCaptchaCode())) {
+            throw new BizException(IamErrorCode.AUTH_008);
+        }
         String accountLower = request.getAccount().trim().toLowerCase();
         MemberEntity member = memberMapper.selectOne(Wrappers.<MemberEntity>lambdaQuery()
                 .eq(MemberEntity::getAccountLower, accountLower).last("LIMIT 1"));

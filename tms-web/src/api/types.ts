@@ -22,6 +22,12 @@ export interface MemberProfile {
   platform: boolean
 }
 
+export interface Captcha {
+  captchaId: string
+  /** base64 图片，形如 data:image/png;base64,... */
+  image: string
+}
+
 export interface LoginResponse {
   token: string
   expiresIn: number

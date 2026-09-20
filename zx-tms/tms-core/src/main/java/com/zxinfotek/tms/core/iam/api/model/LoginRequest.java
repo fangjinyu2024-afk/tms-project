@@ -16,4 +16,10 @@ public class LoginRequest {
 
     @NotNull(message = "msg.valid.entryRequired")
     private SessionEntry entry;
+
+    @NotBlank(message = "msg.valid.captchaRequired")
+    private String captchaId;
+
+    @NotBlank(message = "msg.valid.captchaRequired")
+    private String captchaCode;
 }

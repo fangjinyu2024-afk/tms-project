@@ -12,6 +12,7 @@ public enum IamErrorCode implements ErrorCode {
     AUTH_005("AUTH_005", "需要先修改初始密码"),
     AUTH_006("AUTH_006", "原密码错误"),
     AUTH_007("AUTH_007", "邮箱未验证，无法使用邮件找回"),
+    AUTH_008("AUTH_008", "验证码错误或已过期"),
 
     TENANT_001("TENANT_001", "客户名称已存在"),
     TENANT_002("TENANT_002", "型号仍有归属设备，不能取消关联"),

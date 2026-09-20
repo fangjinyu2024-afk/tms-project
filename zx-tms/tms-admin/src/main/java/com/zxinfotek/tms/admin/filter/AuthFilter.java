@@ -47,6 +47,7 @@ public class AuthFilter extends OncePerRequestFilter {
 
     /** 无需认证的路径 */
     private static final List<String> ANONYMOUS_PATHS = List.of(
+            "/api/auth/captcha",
             "/api/auth/login",
             "/api/auth/password/forgot",
             "/api/auth/password/reset");

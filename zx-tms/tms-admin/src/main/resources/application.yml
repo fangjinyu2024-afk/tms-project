@@ -73,6 +73,15 @@ tms:
     idle-timeout: 30m
     max-lifetime: 12h
     active-write-back: 1m
+  # 图形验证码：登录与找回密码强制校验，enabled 仅供本地开发与自动化测试关闭，生产保持 true
+  captcha:
+    enabled: true
+    length: 4
+    expire: 2m
+    width: 150
+    height: 50
+    font: 6
+    font-size: 34
   security:
     login-fail-threshold: 5
     lock-duration: 15m

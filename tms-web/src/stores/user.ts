@@ -29,8 +29,8 @@ export const useUserStore = defineStore('user', {
     isPlatform: (state) => state.member?.platform === true
   },
   actions: {
-    async login(account: string, password: string) {
-      const data = await loginApi({ account, password, entry: 'CONSOLE' })
+    async login(account: string, password: string, captchaId: string, captchaCode: string) {
+      const data = await loginApi({ account, password, entry: 'CONSOLE', captchaId, captchaCode })
       this.token = data.token
       this.member = data.member
       this.menus = data.menus

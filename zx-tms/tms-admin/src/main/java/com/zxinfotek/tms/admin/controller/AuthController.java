@@ -5,6 +5,7 @@ import com.zxinfotek.tms.common.enums.LogModule;
 import com.zxinfotek.tms.common.enums.OperAction;
 import com.zxinfotek.tms.common.model.Result;
 import com.zxinfotek.tms.core.iam.api.AuthService;
+import com.zxinfotek.tms.core.iam.api.model.CaptchaVO;
 import com.zxinfotek.tms.core.iam.api.model.ChangePasswordRequest;
 import com.zxinfotek.tms.core.iam.api.model.EmailVerifyRequest;
 import com.zxinfotek.tms.core.iam.api.model.ForgotPasswordRequest;
@@ -32,6 +33,12 @@ public class AuthController {
 
     public AuthController(AuthService authService) {
         this.authService = authService;
+    }
+
+    @Operation(summary = "签发图形验证码")
+    @GetMapping("/captcha")
+    public Result<CaptchaVO> captcha() {
+        return Result.ok(authService.createCaptcha());
     }
 
     @Operation(summary = "账号密码登录")
