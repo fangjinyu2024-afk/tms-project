@@ -1341,6 +1341,7 @@ erDiagram
 | POST | `/api/roles/{id}/status` | 启用或停用 | `roles:toggle` |
 | DELETE | `/api/roles/{id}` | 删除角色 | `roles:delete` |
 | GET | `/api/roles/options` | 成员分配角色时的候选角色 | `members:assign` |
+| GET | `/api/roles/export` | 导出角色 | `roles:export` |
 
 #### 5.4.1 `GET /api/permissions/catalog`
 
@@ -1371,6 +1372,7 @@ erDiagram
 | POST | `/api/products` | 新增产品与型号 | `products:create` |
 | PUT | `/api/products/{id}` | 编辑产品与型号 | `products:edit` |
 | DELETE | `/api/products/{id}` | 删除产品 | `products:delete` |
+| GET | `/api/products/export` | 导出产品 | `products:export` |
 | GET | `/api/product-models/options` | 型号下拉，按客户授权过滤 | 任一需要型号的菜单查看权限 |
 
 #### 5.5.1 `PUT /api/tenants/{id}/features`
